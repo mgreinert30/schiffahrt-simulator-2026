@@ -15,7 +15,7 @@ const ROUTES = [
   [[-100, -800], [-160, -1050], [-200, -950], [-150, -700], [-80, -500]],
 ];
 
-const NPC_SPEEDS = [1.8, 2.2, 1.5, 2.5, 1.2];    // m/s
+const NPC_SPEEDS = [5.5, 7.0, 4.5, 8.0, 4.0];    // m/s (~20–29 km/h)
 const NPC_COLORS = [0x334466, 0x443322, 0x223344, 0x442233, 0x334422];
 
 // Einfaches NPC-Schiff bauen

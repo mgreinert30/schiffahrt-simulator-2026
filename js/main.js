@@ -34,6 +34,8 @@ import { NPCSystem }        from './systems/NPCSystem.js';
 // ── UI & Kamera ───────────────────────────────────────────────────────────────
 import { UIManager }        from './ui/UIManager.js';
 import { CameraController } from './camera/CameraController.js';
+import { TutorialSystem }   from './systems/TutorialSystem.js';
+import { ShipShopSystem }   from './systems/ShipShopSystem.js';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Schiff-Geometrie
@@ -169,6 +171,8 @@ class Game {
     this.timeSystem    = new TimeSystem(this.state);
     this.ui            = new UIManager(this);
     this.camCtrl       = new CameraController(this.camera);
+    this.shipShop      = new ShipShopSystem(this);
+    this.tutorial      = null; // wird nach _load() erstellt (DOM muss bereit sein)
 
     // Resize
     window.addEventListener('resize', () => {
@@ -188,7 +192,10 @@ class Game {
 
     this.ui.showHUD();
     this.ui.updateAll();
-    this.ui.showNotification('⚓ Willkommen! Fahre nach Industriehafen Nordheim und drücke F für Aufträge.', 7000);
+
+    // Tutorial nach HUD-Start erstellen (DOM bereit)
+    this.tutorial = new TutorialSystem(this);
+    this.ui.setupShopKeyListener(this);
 
     this.running = true;
     this.clock.start();
@@ -234,6 +241,8 @@ class Game {
     }
 
     this._setLoading('Fertig!', 100);
+    // Ship-Shop Physik-Werte anwenden
+    this.shipShop.applyToPhysics(this.physics);
     await new Promise(r => setTimeout(r, 300));
   }
 
@@ -302,6 +311,9 @@ class Game {
     this.state.shipX       = this.physics.x;
     this.state.shipZ       = this.physics.z;
     this.state.shipHeading = this.physics.heading;
+
+    // ── Tutorial ───────────────────────────────────────────────────────────
+    this.tutorial?.update(dt);
 
     // ── Autosave ───────────────────────────────────────────────────────────
     this.save.update(dt);

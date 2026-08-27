@@ -48,6 +48,17 @@ export class UIManager {
       if (e.code === 'KeyM') this.toggleMap();
       if (e.code === 'Tab')  { e.preventDefault(); this.toggleDebug(); }
     });
+
+    // Tutorial-Buttons
+    document.getElementById('tut-next')?.addEventListener('click', () => this.game.tutorial?.nextStep());
+    document.getElementById('tut-prev')?.addEventListener('click', () => this.game.tutorial?.prevStep());
+    document.getElementById('tut-skip')?.addEventListener('click', () => this.game.tutorial?.skip());
+
+    // Shop-Buttons
+    document.getElementById('close-ship-shop')?.addEventListener('click', () => this.hideShipShop());
+    document.querySelectorAll('.shop-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => this._switchShopTab(btn.dataset.tab));
+    });
   }
 
   showHUD() { this.$hud?.classList.remove('hidden'); }
@@ -407,6 +418,149 @@ export class UIManager {
       <div><b>CARGO</b> ${state.hasCargo ? state.cargo.type + ' ' + state.cargo.mass + 't' : 'leer'}</div>
       <div><b>ZONE</b> ${this.game.portSystem?.nearPort?.shortName ?? '—'} / ${this.game.portSystem?.currentZone ?? '—'}</div>
     `;
+  }
+
+  // ── P-Taste für Shop ──────────────────────────────────────────────────────
+  setupShopKeyListener(game) {
+    window.addEventListener('keydown', e => {
+      if (e.code === 'KeyP') this.toggleShipShop();
+    });
+  }
+
+  // ── Ship Shop ─────────────────────────────────────────────────────────────
+  toggleShipShop() {
+    const el = document.getElementById('ship-shop-overlay');
+    if (!el) return;
+    if (el.classList.contains('hidden')) this.showShipShop();
+    else this.hideShipShop();
+  }
+
+  showShipShop() {
+    const el = document.getElementById('ship-shop-overlay');
+    if (!el) return;
+    this._switchShopTab('ships');
+    el.classList.remove('hidden');
+  }
+
+  hideShipShop() {
+    document.getElementById('ship-shop-overlay')?.classList.add('hidden');
+  }
+
+  _switchShopTab(tab) {
+    document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('.shop-tab-content').forEach(c => c.classList.toggle('hidden', c.dataset.tab !== tab));
+    this._renderShopTab(tab);
+  }
+
+  _renderShopTab(tab) {
+    const shop    = this.game.shipShop;
+    const state   = this.game.state;
+    const money   = state.money;
+
+    if (tab === 'ships') {
+      const { SHIPS } = window._shopData ?? {};
+      const container = document.getElementById('shop-ships');
+      if (!container || !shop) return;
+      import('../systems/ShipShopSystem.js').then(({ SHIPS }) => {
+        container.innerHTML = '';
+        for (const ship of SHIPS) {
+          const owned = shop.config.shipId === ship.id;
+          const canBuy = !owned && money >= ship.price;
+          const card = document.createElement('div');
+          card.className = 'shop-card' + (owned ? ' owned' : '');
+          card.innerHTML = `
+            <div class="shop-card-icon">${ship.icon}</div>
+            <div class="shop-card-name">${ship.name}</div>
+            <div class="shop-card-desc">${ship.desc}</div>
+            <div class="shop-card-stats">
+              <span>📦 ${ship.maxCargo} t</span>
+              <span>💨 ${(ship.maxSpeed * 3.6).toFixed(0)} km/h</span>
+            </div>
+            <div class="shop-card-price">${ship.price === 0 ? 'Startschiff' : '€ ' + ship.price.toLocaleString('de-DE')}</div>
+            <button class="btn-primary shop-buy-btn" ${owned ? 'disabled' : ''} data-ship="${ship.id}">
+              ${owned ? '✅ Im Besitz' : canBuy ? 'Kaufen' : '❌ Zu teuer'}
+            </button>
+          `;
+          container.appendChild(card);
+        }
+        container.querySelectorAll('.shop-buy-btn:not([disabled])').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const res = shop.buyShip(btn.dataset.ship);
+            this.showNotification(res.ok ? `✅ ${res.msg}` : `❌ ${res.msg}`, 3000);
+            if (res.ok) { this.updateAll(); this._renderShopTab('ships'); }
+          });
+        });
+      });
+    }
+
+    if (tab === 'upgrades') {
+      import('../systems/ShipShopSystem.js').then(({ UPGRADES }) => {
+        const renderGroup = (containerId, items, currentTier, buyFn) => {
+          const c = document.getElementById(containerId);
+          if (!c) return;
+          c.innerHTML = '';
+          for (const item of items) {
+            const owned = item.tier <= currentTier;
+            const isNext = item.tier === currentTier + 1;
+            const canBuy = isNext && money >= item.price;
+            const d = document.createElement('div');
+            d.className = 'upg-row' + (owned ? ' upg-owned' : '') + (isNext ? ' upg-next' : '');
+            d.innerHTML = `
+              <span class="upg-name">${item.name}</span>
+              <span class="upg-desc">${item.desc}</span>
+              <span class="upg-price">${item.price === 0 ? 'Kostenlos' : '€ ' + item.price.toLocaleString('de-DE')}</span>
+              <button class="btn-primary upg-buy" ${!isNext || !canBuy ? 'disabled' : ''} data-tier="${item.tier}">
+                ${owned ? '✅' : isNext ? (canBuy ? 'Kaufen' : '❌') : '🔒'}
+              </button>
+            `;
+            c.appendChild(d);
+          }
+          c.querySelectorAll('.upg-buy:not([disabled])').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const res = buyFn(parseInt(btn.dataset.tier));
+              this.showNotification(res.ok ? `✅ ${res.msg}` : `❌ ${res.msg}`, 3000);
+              if (res.ok) { this.updateAll(); this._renderShopTab('upgrades'); }
+            });
+          });
+        };
+        renderGroup('upg-engine', UPGRADES.engine, shop.config.engineTier, t => shop.buyEngineUpgrade(t));
+        renderGroup('upg-hull',   UPGRADES.hull,   shop.config.hullTier,   t => shop.buyHullUpgrade(t));
+        renderGroup('upg-tank',   UPGRADES.tank,   shop.config.tankTier,   t => shop.buyTankUpgrade(t));
+      });
+    }
+
+    if (tab === 'design') {
+      import('../systems/ShipShopSystem.js').then(({ UPGRADES }) => {
+        const c = document.getElementById('shop-design');
+        if (!c) return;
+        const jobsDone = state.jobsDone ?? 0;
+        c.innerHTML = '';
+        for (const cos of UPGRADES.cosmetic) {
+          const owned    = shop.config.cosmeticId === cos.id;
+          const unlocked = !cos.gift || jobsDone >= (cos.giftAfterJobs ?? 999);
+          const canBuy   = !owned && unlocked && (cos.price === 0 || money >= cos.price);
+          const d = document.createElement('div');
+          d.className = 'shop-card' + (owned ? ' owned' : '');
+          d.innerHTML = `
+            <div class="design-swatch" style="background:#${cos.color.toString(16).padStart(6,'0')}"></div>
+            <div class="shop-card-name">${cos.name}</div>
+            <div class="shop-card-desc">${cos.desc}</div>
+            <div class="shop-card-price">${cos.gift ? '🎁 Geschenk' : cos.price === 0 ? 'Kostenlos' : '€ ' + cos.price.toLocaleString('de-DE')}</div>
+            <button class="btn-primary shop-buy-btn" ${owned || !canBuy ? 'disabled' : ''} data-cos="${cos.id}">
+              ${owned ? '✅ Aktiv' : unlocked ? (cos.price === 0 ? 'Aktivieren' : (canBuy ? 'Kaufen' : '❌')) : `🔒 ${cos.giftAfterJobs} Aufträge`}
+            </button>
+          `;
+          c.appendChild(d);
+        }
+        c.querySelectorAll('.shop-buy-btn:not([disabled])').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const res = shop.buyCosmetic(btn.dataset.cos);
+            this.showNotification(res.ok ? `✅ ${res.msg}` : `❌ ${res.msg}`, 3000);
+            if (res.ok) { this.updateAll(); this._renderShopTab('design'); }
+          });
+        });
+      });
+    }
   }
 
   // ── Sammel-Update ─────────────────────────────────────────────────────────

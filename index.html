@@ -178,6 +178,52 @@
     </div>
   </div>
 
+  <!-- ═══════════════ Tutorial ═══════════════ -->
+  <div id="tutorial-overlay" class="hidden">
+    <div id="tut-arrow" class="tut-arrow hidden">⬆️ Nordheim</div>
+    <div id="tut-box">
+      <div id="tut-step" class="tut-step">1 / 9</div>
+      <div id="tut-title" class="tut-title">Willkommen!</div>
+      <div id="tut-text" class="tut-text"></div>
+      <div id="tut-hint" class="tut-hint"></div>
+      <div id="tut-action" class="tut-action"></div>
+      <div class="tut-btns">
+        <button class="btn-quality" id="tut-prev">← Zurück</button>
+        <button class="btn-primary" id="tut-next" style="padding:8px 20px;font-size:13px">Weiter →</button>
+        <button class="btn-quality" id="tut-skip" style="font-size:11px;padding:6px 12px;opacity:0.6">Überspringen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Schiffs-Shop ═══════════════ -->
+  <div id="ship-shop-overlay" class="hidden overlay-panel">
+    <div class="overlay-inner shop-inner">
+      <div class="shop-header">
+        <h3>🛒 Schiffsshop &nbsp;<span class="shop-money" id="shop-money-display"></span></h3>
+        <button class="btn-secondary" id="close-ship-shop" style="width:auto;padding:6px 14px">✕</button>
+      </div>
+      <div class="shop-tabs">
+        <button class="shop-tab-btn active" data-tab="ships">🚢 Schiffe</button>
+        <button class="shop-tab-btn" data-tab="upgrades">⚙️ Upgrades</button>
+        <button class="shop-tab-btn" data-tab="design">🎨 Design</button>
+      </div>
+      <!-- Schiffe -->
+      <div class="shop-tab-content" data-tab="ships">
+        <div id="shop-ships" class="shop-grid"></div>
+      </div>
+      <!-- Upgrades -->
+      <div class="shop-tab-content hidden" data-tab="upgrades">
+        <div class="upg-section"><div class="upg-label">⚡ Motor</div><div id="upg-engine"></div></div>
+        <div class="upg-section"><div class="upg-label">🛡️ Rumpf</div><div id="upg-hull"></div></div>
+        <div class="upg-section"><div class="upg-label">⛽ Tank</div><div id="upg-tank"></div></div>
+      </div>
+      <!-- Design -->
+      <div class="shop-tab-content hidden" data-tab="design">
+        <div id="shop-design" class="shop-grid"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════ Hauptmenü ═══════════════ -->
   <div id="main-menu">
     <div id="menu-bg"></div>

@@ -422,23 +422,22 @@ export class WorldMap {
 
   // ── Tonnen / Bojen ────────────────────────────────────────────────────────
   _buildBuoys() {
+    // Realistische Fahrrinnentonnen — kein Leuchten, nur physische Objekte
     const positions = [
-      { x: -80, z: -800, col: 0xff2222 }, { x:  80, z: -800, col: 0x22cc22 },
-      { x: -80, z: -500, col: 0xff2222 }, { x:  80, z: -500, col: 0x22cc22 },
-      { x: -80, z: -200, col: 0xff2222 }, { x:  80, z: -200, col: 0x22cc22 },
-      { x: -80, z:  100, col: 0xff2222 }, { x:  80, z:  100, col: 0x22cc22 },
-      { x: -80, z:  400, col: 0xff2222 }, { x:  80, z:  400, col: 0x22cc22 },
-      { x: -80, z:  700, col: 0xff2222 }, { x:  80, z:  700, col: 0x22cc22 },
+      { x: -80, z: -800, col: 0xbb1111 }, { x:  80, z: -800, col: 0x116611 },
+      { x: -80, z: -500, col: 0xbb1111 }, { x:  80, z: -500, col: 0x116611 },
+      { x: -80, z: -200, col: 0xbb1111 }, { x:  80, z: -200, col: 0x116611 },
+      { x: -80, z:  100, col: 0xbb1111 }, { x:  80, z:  100, col: 0x116611 },
+      { x: -80, z:  400, col: 0xbb1111 }, { x:  80, z:  400, col: 0x116611 },
+      { x: -80, z:  700, col: 0xbb1111 }, { x:  80, z:  700, col: 0x116611 },
     ];
     for (const b of positions) {
-      const mat = new THREE.MeshStandardMaterial({
-        color: b.col, emissive: b.col, emissiveIntensity: 0.6, roughness: 0.8
-      });
-      this._cyl(mat, b.x, 2, b.z, 2, 2, 4, 6);
-      this._cyl(mat, b.x, 5, b.z, 0.4, 0.4, 4, 4);  // Mast
-      const pl = new THREE.PointLight(b.col, 12, 80, 2);
-      pl.position.set(b.x, 6, b.z);
-      this.scene.add(pl);
+      // Matte Farbe ohne emissive — sieht aus wie echte Tonne, nicht wie Leuchtpunkt
+      const mat = new THREE.MeshStandardMaterial({ color: b.col, roughness: 0.9, metalness: 0.1 });
+      this._cyl(mat, b.x, 1.5, b.z, 1.8, 2.2, 3, 8);   // Tonnenkörper
+      this._cyl(this.m.steel, b.x, 3.5, b.z, 0.3, 0.3, 4, 4); // Mast
+      // Kleines mattes Topplicht (kein PointLight)
+      this._sphere(mat, b.x, 5.8, b.z, 0.4);
     }
   }
 

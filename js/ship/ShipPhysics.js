@@ -8,7 +8,8 @@ export const TELEGRAPH = {
 };
 
 // Ziel-Geschwindigkeit pro Stufe (m/s) — Vorwärts positiv
-const TARGET_SPEED = [-2.0, -1.4, -0.9, -0.45, 0, 0.85, 2.0, 3.8, 6.5];
+// Full Ahead = 16.5 m/s ≈ 59 km/h (Gameplay-optimiert)
+const TARGET_SPEED = [-5.5, -4.0, -2.5, -1.2, 0, 2.5, 6.0, 10.5, 16.5];
 // Index = level + 4  (level -4 → index 0)
 
 // Schiff-Basisparameter (leeres Frachtschiff)
@@ -19,10 +20,10 @@ const BASE = {
   width:         6.5,    // m
   draftEmpty:    1.4,    // m
   draftFull:     2.0,    // m
-  motorForce:    90000,  // N (~370 kW)
-  dragCoeff:     0.55,   // Längswiderstand
+  motorForce:    280000, // N (aufgestockt für 60 km/h-Gameplay)
+  dragCoeff:     0.38,   // Wasserwiderstand (angepasst)
   turnDragCoeff: 3.2,    // Drehdämpfung
-  maxTurnRate:   0.45,   // rad/s
+  maxTurnRate:   0.55,   // rad/s
 };
 
 export class ShipPhysics {
@@ -113,7 +114,7 @@ export class ShipPhysics {
     }
 
     // Sicherheitsbegrenzer
-    const absMax = 7.5 * this.maxSpeedFactor;
+    const absMax = 20.0 * this.maxSpeedFactor;
     this.speed    = Math.max(-2.5, Math.min(absMax, this.speed));
     if (Math.abs(this.speed) < 0.005) this.speed = 0;
 
