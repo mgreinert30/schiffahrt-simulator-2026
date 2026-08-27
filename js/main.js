@@ -47,19 +47,20 @@ import { LockSystem }       from './systems/LockSystem.js';
 function buildShip(scene) {
   const group = new THREE.Group();
 
-  // Materialien
-  const matBottom = new THREE.MeshStandardMaterial({ color: 0x6e1010, roughness: 0.75, metalness: 0.15 }); // rot Antifouling
-  const matHull   = new THREE.MeshStandardMaterial({ color: 0x1a2535, roughness: 0.60, metalness: 0.32 }); // dunkel navy
-  const matDeck   = new THREE.MeshStandardMaterial({ color: 0x2e1e10, roughness: 1.0  }); // dunkles Teakdeck
-  const matHatch  = new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.65, metalness: 0.45 }); // Lukendeckel
-  const matCoam   = new THREE.MeshStandardMaterial({ color: 0x354050, roughness: 0.80, metalness: 0.22 }); // Lukenrahmen
-  const matCabin  = new THREE.MeshStandardMaterial({ color: 0xe0d8c8, roughness: 0.58, metalness: 0.06 }); // cremefarbener Aufbau
-  const matBridge = new THREE.MeshStandardMaterial({ color: 0xeeeadc, roughness: 0.48, metalness: 0.08 }); // Brücke weiß
+  // Materialien — Farbgebung nach echtem Rhein-Frachtschiff (ALBIS/WESERLAND-Stil)
+  const matBottom = new THREE.MeshStandardMaterial({ color: 0x881818, roughness: 0.75, metalness: 0.10 }); // rostrot Antifouling
+  const matHull   = new THREE.MeshStandardMaterial({ color: 0x1848b0, roughness: 0.55, metalness: 0.30 }); // BLAUER Rumpf (Hauptcharakter)
+  const matHullDk = new THREE.MeshStandardMaterial({ color: 0x0d1822, roughness: 0.70, metalness: 0.20 }); // schwarzer Unterwasserbereich
+  const matDeck   = new THREE.MeshStandardMaterial({ color: 0x161008, roughness: 1.0  }); // fast-schwarzes Deck
+  const matHatch  = new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.65, metalness: 0.45 }); // Lukendeckel Stahl
+  const matCoam   = new THREE.MeshStandardMaterial({ color: 0x2a3040, roughness: 0.82, metalness: 0.22 }); // Lukenrahmen
+  const matCabin  = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.50, metalness: 0.04 }); // WEISS Aufbau
+  const matBridge = new THREE.MeshStandardMaterial({ color: 0xfcfaf6, roughness: 0.40, metalness: 0.06 }); // REINWEISS Brücke
   const matGlass  = new THREE.MeshStandardMaterial({ color: 0x7ab8d0, roughness: 0.06, metalness: 0.82, transparent: true, opacity: 0.58 });
   const matFunnel = new THREE.MeshStandardMaterial({ color: 0xf0a020, roughness: 0.72 }); // gelber Schornstein
-  const matBlack  = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.85 }); // Schornstein-Kappe
-  const matSteel  = new THREE.MeshStandardMaterial({ color: 0x7c8898, roughness: 0.42, metalness: 0.62 }); // Stahl
-  const matRail   = new THREE.MeshStandardMaterial({ color: 0x606878, roughness: 0.52, metalness: 0.55 }); // Reling
+  const matBlack  = new THREE.MeshStandardMaterial({ color: 0x101010, roughness: 0.88 }); // Schornstein-Kappe
+  const matSteel  = new THREE.MeshStandardMaterial({ color: 0x8090a0, roughness: 0.42, metalness: 0.62 }); // Stahl
+  const matRail   = new THREE.MeshStandardMaterial({ color: 0x5a6870, roughness: 0.52, metalness: 0.55 }); // Reling
   const matLife   = new THREE.MeshStandardMaterial({ color: 0xff6800, roughness: 0.80 }); // Rettungsring orange
 
   const B = (mat, x, y, z, w, h, d) => {
@@ -71,19 +72,25 @@ function buildShip(scene) {
     m.position.set(x, y, z); m.castShadow = true; group.add(m); return m;
   };
 
-  // ── RUMPF UNTER WASSERLINIE (rot Antifouling, y -1.1…+0.45) ─────────────
-  B(matBottom, 0,  -0.34, -1.0, 5.6, 1.5, 28);  // Hauptrumpf
-  B(matBottom, 0,  -0.40, -15.2, 4.8, 1.4, 2.8); // Bug-Stufe 1
-  B(matBottom, 0,  -0.52, -16.8, 3.4, 1.2, 2.2); // Bug-Stufe 2
-  B(matBottom, 0,  -0.68, -18.0, 1.8, 1.0, 1.8); // Bugspitze
+  // ── RUMPF UNTER WASSERLINIE (dunkelgrau/schwarz + schmaler Antifouling-Streifen) ──
+  // Unterwasserrumpf (fast schwarz)
+  B(matHullDk, 0,  -0.55, -1.0, 5.6, 1.2, 28);
+  B(matHullDk, 0,  -0.60, -15.2, 4.8, 1.2, 2.8);
+  B(matHullDk, 0,  -0.68, -16.8, 3.4, 1.0, 2.2);
+  B(matHullDk, 0,  -0.78, -18.0, 1.8, 0.85, 1.8);
+  // Antifouling-Streifen (roter Streifen direkt an Wasserlinie)
+  B(matBottom, 0,   0.14, -1.0,  5.62, 0.52, 28);
+  B(matBottom, 0,   0.10, -15.2, 4.82, 0.48, 2.8);
+  B(matBottom, 0,   0.05, -16.8, 3.42, 0.42, 2.2);
+  B(matBottom, 0,   0.00, -18.0, 1.82, 0.38, 1.8);
 
-  // ── RUMPF ÜBER WASSERLINIE (navy, y +0.45…+2.65) ────────────────────────
-  B(matHull,   0,  1.55, -1.0, 5.8, 2.2, 28);   // Hauptrumpf
-  B(matHull,   0,  1.45, -15.2, 5.2, 2.0, 2.8); // Bug-Stufe 1
-  B(matHull,   0,  1.30, -16.8, 3.7, 1.7, 2.2); // Bug-Stufe 2
-  B(matHull,   0,  1.10, -18.0, 2.0, 1.4, 1.8); // Bugspitze
-  B(matHull,   0,  1.55,  14.2, 5.5, 2.2, 2.5); // Heck-Stufe 1
-  B(matHull,   0,  1.35,  15.8, 4.8, 1.8, 1.8); // Heck-Stufe 2
+  // ── RUMPF ÜBER WASSERLINIE (BLAU — wie Albis/Weserland) ──────────────────
+  B(matHull,   0,  1.55, -1.0, 5.82, 2.10, 28);  // blauer Freeboard
+  B(matHull,   0,  1.45, -15.2, 5.24, 1.95, 2.8);
+  B(matHull,   0,  1.30, -16.8, 3.72, 1.72, 2.2);
+  B(matHull,   0,  1.10, -18.0, 2.02, 1.42, 1.8);
+  B(matHull,   0,  1.55,  14.2, 5.52, 2.10, 2.5);
+  B(matHull,   0,  1.35,  15.8, 4.82, 1.82, 1.8);
 
   // ── BULLWARK (Schutzwand auf Relinghöhe) ─────────────────────────────────
   B(matHull,  2.98, 3.15, -1.0, 0.18, 1.15, 28);  // Steuerbord
@@ -187,27 +194,44 @@ function buildShip(scene) {
   ml.position.set(0, 12.6, -15.5); group.add(ml);
 
   // ── CONTAINER-GRUPPE (sichtbar wenn Ladung an Bord) ──────────────────────
+  // Farbpalette wie auf Referenzfotos: Blau, Rot, Grün, Beige, Grau, Dunkelblau
   const cargoGroup = new THREE.Group();
-  const CONT_COLORS = [0x2244aa, 0xaa2020, 0x226020, 0xcc8000, 0x606870];
-  const colorPick   = [0, 2, 4, 1, 3, 0]; // je Container
-  for (let col = 0; col < 2; col++) {       // 2 Spalten (x)
-    for (let row = 0; row < 3; row++) {     // 3 Reihen (z)
-      const cGeo = new THREE.BoxGeometry(2.32, 2.50, 5.30);
-      const cMat = new THREE.MeshStandardMaterial({
-        color: CONT_COLORS[colorPick[col * 3 + row]],
-        roughness: 0.78, metalness: 0.20,
-      });
-      const cMesh = new THREE.Mesh(cGeo, cMat);
-      cMesh.position.set(
-        col === 0 ? -1.16 : 1.16,  // 2 Spalten-Positionen
-        4.52,                        // über Lukendeckel
-        -10.2 + row * 5.5           // z: Bug → Heck (-10.2, -4.7, +0.8)
-      );
-      cMesh.castShadow = true;
-      cargoGroup.add(cMesh);
+  const CONT_COLORS = [0x1c44a0, 0xaa2222, 0x1e6624, 0xc8963a, 0x5a6268, 0x8a3a8a, 0x2266aa, 0x883a1a];
+  const makeContainer = (cx, cy, cz, colorIdx, wd = 2.30, ht = 2.48, dp = 5.22) => {
+    const mat = new THREE.MeshStandardMaterial({
+      color: CONT_COLORS[colorIdx % CONT_COLORS.length],
+      roughness: 0.82, metalness: 0.18,
+    });
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(wd, ht, dp), mat);
+    mesh.position.set(cx, cy, cz);
+    mesh.castShadow = true;
+    cargoGroup.add(mesh);
+    // Containerrahmen-Streifen (helle Kanten)
+    const edgeMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.8, metalness: 0.3 });
+    const et = 0.06;
+    const topStrip = new THREE.Mesh(new THREE.BoxGeometry(wd+0.02, et, dp+0.02), edgeMat);
+    topStrip.position.set(cx, cy + ht/2 - et/2, cz);
+    cargoGroup.add(topStrip);
+  };
+
+  // Lage 1: 2 Spalten × 3 Reihen (Hauptlage)
+  const L1Y = 4.52, Z0 = -10.2, DZ = 5.5;
+  const l1picks = [0, 2, 4, 1, 3, 5];
+  for (let col = 0; col < 2; col++) {
+    for (let row = 0; row < 3; row++) {
+      makeContainer(col === 0 ? -1.15 : 1.15, L1Y, Z0 + row * DZ, l1picks[col * 3 + row]);
     }
   }
-  cargoGroup.visible = false; // erst sichtbar wenn Ladung geladen
+  // Lage 2: 2 Spalten × 2 Reihen (obendrauf, leicht versetzt wie auf echten Schiffen)
+  const L2Y = L1Y + 2.50;
+  const l2picks = [6, 1, 3, 2];
+  for (let col = 0; col < 2; col++) {
+    for (let row = 0; row < 2; row++) {
+      makeContainer(col === 0 ? -1.15 : 1.15, L2Y, Z0 + row * DZ + DZ/2, l2picks[col * 2 + row]);
+    }
+  }
+
+  cargoGroup.visible = false;
   group.add(cargoGroup);
   group._cargoGroup = cargoGroup;
 

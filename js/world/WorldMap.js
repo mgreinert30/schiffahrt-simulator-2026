@@ -29,8 +29,11 @@ export const PORTS = [
 // ── Material-Bibliothek ────────────────────────────────────────────────────────
 function makeMats() {
   return {
-    concrete:  new THREE.MeshStandardMaterial({ color: 0x6a6a72, roughness: 0.92 }),
-    concreteD: new THREE.MeshStandardMaterial({ color: 0x4a4a52, roughness: 0.95 }),
+    concrete:  new THREE.MeshStandardMaterial({ color: 0x7a7870, roughness: 0.95 }), // heller Beton/Pflaster
+    concreteD: new THREE.MeshStandardMaterial({ color: 0x5a5850, roughness: 0.98 }), // dunkler Pflaster
+    cobble:    new THREE.MeshStandardMaterial({ color: 0x8a8070, roughness: 1.0  }), // Kopfsteinpflaster
+    cobbleDk:  new THREE.MeshStandardMaterial({ color: 0x5e5648, roughness: 1.0  }), // dunkles Pflaster
+    stone:     new THREE.MeshStandardMaterial({ color: 0x747060, roughness: 1.0  }), // Naturstein/Kaimauer
     steel:     new THREE.MeshStandardMaterial({ color: 0x9090a0, roughness: 0.45, metalness: 0.6 }),
     yellow:    new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.7  }),
     rust:      new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.95, metalness: 0.2 }),
@@ -64,6 +67,7 @@ export class WorldMap {
     this._buildRoads();
     this._buildBridge();
     this._buildPorts();
+    this._buildContainerYard();
     this._buildTowns();
     this._buildInfrastructure();
     this._buildBuoys();
@@ -588,6 +592,77 @@ export class WorldMap {
     this.scene.add(m);
     return m;
   }
+  // ── Containerstellplatz am Industriehafen (Nordheim) ──────────────────────
+  _buildContainerYard() {
+    const rng = this._rng(4242);
+    const COLORS = [0x1c44a0, 0xaa2222, 0x1e6624, 0xc8963a, 0x5a6268, 0x2266aa, 0x883a1a, 0x8a3a8a];
+    // Container-Stellfläche westlich des Industriehafens
+    const baseX = -560, baseZ = -920;
+
+    // InstancedMesh für Containerblöcke
+    const cGeo = new THREE.BoxGeometry(2.4, 2.6, 6.1);
+    const totalContainers = 80;
+    const dummy = new THREE.Object3D();
+
+    // Pro Farbe ein separates InstancedMesh (8 Farben, ~10 pro Farbe)
+    for (let ci = 0; ci < COLORS.length; ci++) {
+      const mat = new THREE.MeshStandardMaterial({ color: COLORS[ci], roughness: 0.82, metalness: 0.18 });
+      const n = 10;
+      const im = new THREE.InstancedMesh(cGeo, mat, n);
+      im.castShadow = im.receiveShadow = true;
+      let idx = 0;
+      for (let i = 0; i < n; i++) {
+        const row   = Math.floor((ci * 10 + i) / 8);
+        const col   = (ci * 10 + i) % 8;
+        const stack = Math.floor(rng() * 2.5); // 0, 1 oder 2 Lagen hoch
+        dummy.position.set(
+          baseX - col * 7.5 - rng() * 0.3,
+          1.3 + stack * 2.65,
+          baseZ + row * 8.0 + rng() * 0.3
+        );
+        dummy.rotation.y = Math.floor(rng() * 2) * Math.PI / 2;
+        dummy.updateMatrix();
+        im.setMatrixAt(idx++, dummy.matrix);
+      }
+      im.instanceMatrix.needsUpdate = true;
+      this.scene.add(im);
+    }
+
+    // Bodenmarkierungen (gelbe Fahrspuren)
+    const markMat = new THREE.MeshStandardMaterial({ color: 0xf0d020, roughness: 1 });
+    for (let row = 0; row < 10; row++) {
+      this._box(markMat, baseX - 38, 0.25, baseZ + row * 8, 78, 0.1, 0.8);
+    }
+    for (let col = 0; col < 9; col++) {
+      this._box(markMat, baseX - col * 7.5, 0.25, baseZ + 38, 0.8, 0.1, 78);
+    }
+
+    // Containerstapel bei Terminal Osterfeld (Ostseite)
+    const bX2 = 670, bZ2 = -200;
+    for (let ci = 0; ci < COLORS.length; ci++) {
+      const mat = new THREE.MeshStandardMaterial({ color: COLORS[ci], roughness: 0.82, metalness: 0.18 });
+      const n = 8;
+      const im = new THREE.InstancedMesh(cGeo, mat, n);
+      im.castShadow = im.receiveShadow = true;
+      let idx = 0;
+      for (let i = 0; i < n; i++) {
+        const row   = Math.floor((ci * 8 + i) / 6);
+        const col   = (ci * 8 + i) % 6;
+        const stack = Math.floor(rng() * 3.0);
+        dummy.position.set(
+          bX2 + col * 7.5,
+          1.3 + stack * 2.65,
+          bZ2 - row * 8.0
+        );
+        dummy.rotation.y = 0;
+        dummy.updateMatrix();
+        im.setMatrixAt(idx++, dummy.matrix);
+      }
+      im.instanceMatrix.needsUpdate = true;
+      this.scene.add(im);
+    }
+  }
+
   // ── Ufer-Übergangszone: Schlamm, Kies, Steine ─────────────────────────────
   _buildShoreTransition() {
     const rng      = this._rng(9001);
@@ -653,6 +728,38 @@ export class WorldMap {
     stones2.instanceMatrix.needsUpdate = true;
     this.scene.add(stones1);
     this.scene.add(stones2);
+
+    // ── Kopfsteinpflaster-Promenade vor Stadthafen (Ostseite) ─────────────
+    // Schönes gepflastertes Ufer wie auf Referenzfotos
+    const { cobble, cobbleDk, stone } = this.m;
+    // Promenade: breiter Streifen am Ostufer beim Stadthafen
+    this._box(cobble, 272, 0.3, 900, 100, 0.5, 420); // Hauptfläche
+    // Pflaster-Raster (dunkle Fugenlinien)
+    for (let pz = 700; pz < 1110; pz += 14) {
+      this._box(cobbleDk, 272, 0.41, pz, 100, 0.08, 1.2);
+    }
+    for (let px = 222; px < 322; px += 14) {
+      this._box(cobbleDk, px, 0.41, 900, 1.2, 0.08, 420);
+    }
+    // Steinmauer am Wasserrand
+    this._box(stone, 218, 1.0, 900, 4, 2.2, 420);
+    // Poller entlang Promenade
+    for (let pz = 730; pz < 1060; pz += 45) {
+      this._cyl(this.m.dark, 220, 2.5, pz, 0.3, 0.35, 2.2, 6);
+    }
+
+    // ── Kopfsteinpflaster-Promenade vor Nordheim (Westseite) ─────────────
+    this._box(cobble, -332, 0.3, -950, 90, 0.5, 300); // Promenade
+    for (let pz = -1100; pz < -800; pz += 14) {
+      this._box(cobbleDk, -332, 0.41, pz, 90, 0.08, 1.2);
+    }
+    for (let px = -377; px < -287; px += 14) {
+      this._box(cobbleDk, px, 0.41, -950, 1.2, 0.08, 300);
+    }
+    this._box(stone, -285, 1.0, -950, 4, 2.2, 300);
+    for (let pz = -1080; pz < -820; pz += 45) {
+      this._cyl(this.m.dark, -287, 2.5, pz, 0.3, 0.35, 2.2, 6);
+    }
   }
 
   _rng(seed) {
