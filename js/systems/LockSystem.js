@@ -25,9 +25,9 @@ export class LockSystem {
   constructor(scene, physics) {
     this.scene       = scene;
     this.physics     = physics;
-    this._state      = LOCK_STATES.IDLE;
-    this._timer      = 0;
-    this._gateAngle  = 0;          // 0=zu, PI/2=offen
+    this._state      = LOCK_STATES.OPEN;  // startet offen — kein Blocker am Spielstart
+    this._timer      = 999;              // bleibt lange offen
+    this._gateAngle  = Math.PI / 2;     // Tor von Anfang an offen
     this._gateGrpL   = null;
     this._gateGrpR   = null;
     this._trafficLight = null;
@@ -63,13 +63,8 @@ export class LockSystem {
     return '🔔 Schleusung angefordert. Nordheim Lock Control: Tor öffnet in Kürze.';
   }
 
-  // Prüft ob Tor Spieler blockiert (für Physik-System)
-  isBlocking(px, pz) {
-    if (this._state === LOCK_STATES.OPEN || this._state === LOCK_STATES.OPENING) return false;
-    const dx = px - LOCK.x;
-    const dz = pz - LOCK.gateZ;
-    return Math.abs(dx) < LOCK.halfW + 3 && Math.abs(dz) < LOCK.blockRadius;
-  }
+  // Schleuse blockiert NICHT physisch — nur visuelle + Funk-Interaktion
+  isBlocking(px, pz) { return false; }
 
   // ── Update ─────────────────────────────────────────────────────────────────
   update(dt) {

@@ -74,40 +74,57 @@ export class WorldMap {
     this._buildLighthouse();
   }
 
-  // ── Terrain ────────────────────────────────────────────────────────────────
+  // ── Terrain — zusammenhängendes Gewässer (ETS-Stil) ───────────────────────
+  // Hauptfluss x:-200..+200 durchgehend befahrbar.
+  // Hafenbecken sind Aussparungen im Ufer-Terrain, klar verbunden mit Hauptfluss.
   _buildTerrain() {
-    const { grass, grassLight, gravel, concrete } = this.m;
+    const { grass, grassLight } = this.m;
+    const GH = 10;  // Terrain-Höhe (Grundbox)
 
-    // West-Ufer (Hauptlandmasse)
-    this._box(grass, -2100, -0.5, 0, 3000, 12, 8000);
-    // Ost-Ufer
-    this._box(grass, 2100, -0.5, 0, 3000, 12, 8000);
+    // ── WEST-UFER mit NORDHEIM-HAFENBECKEN (x:-200 bis -500, z:-1100 bis -820) ──
+    // Nördlicher Abschnitt (über dem Becken)  — z-2800 bis -1100, fullwidth
+    this._box(grass, -1850, -0.5, -1950, 3300, GH, 1700);
+    // Schmaler Streifen NEBEN dem Becken  — nur x:-500 bis -3500
+    this._box(grass, -2000, -0.5,  -960, 3000, GH,  280);
+    // Südlicher Abschnitt (unter dem Becken) — z-820 bis +2800, fullwidth
+    this._box(grass, -1850, -0.5,   990, 3300, GH, 3620);
 
-    // Deiche / Böschungen am Ufer (leicht erhöhte Streifen)
-    this._box(grassLight, -260, 1.5, 0, 80, 4, 8000);  // West-Deich
-    this._box(grassLight,  260, 1.5, 0, 80, 4, 8000);  // Ost-Deich
+    // ── OST-UFER mit TERMINAL-OST (x:+200..+730, z:-340..-60)
+    //                  und STADTHAFEN (x:+200..+480, z:+820..+1060) ──────────
+    // Nördlicher Abschnitt — z-2800 bis -340, fullwidth
+    this._box(grass,  1850, -0.5, -1570, 3300, GH, 2460);
+    // Neben Terminal-Ost — nur x:+730 bis +3500 (lässt Terminal-Becken frei)
+    this._box(grass,  2115, -0.5,  -200, 2770, GH,  280);
+    // Zwischen Terminal und Stadthafen — z-60 bis +820, fullwidth
+    this._box(grass,  1850, -0.5,   380, 3300, GH,  880);
+    // Neben Stadthafen — nur x:+480 bis +3500 (lässt Stadthafen-Becken frei)
+    this._box(grass,  1990, -0.5,   940, 3020, GH,  240);
+    // Südlicher Abschnitt — z+1060 bis +2800, fullwidth
+    this._box(grass,  1850, -0.5,  1930, 3300, GH, 1740);
 
-    // Sandbänke / Schlickzonen
-    this._box(new THREE.MeshStandardMaterial({ color: 0xa89868, roughness: 1 }),
-              -150, 0.05, -500, 60, 0.5, 300);
-    this._box(new THREE.MeshStandardMaterial({ color: 0xb8a878, roughness: 1 }),
-               180, 0.05,  400, 50, 0.5, 200);
+    // ── DEICHE (dünne Uferböschung direkt am Hauptfluss, MIT LÜCKEN) ─────────
+    // West-Deich — Lücke z:-1100 bis -820 für Nordheim-Einfahrt
+    this._box(grassLight, -195, 1.8, -1950, 20, 3.8, 1700);  // Nord-Teil
+    this._box(grassLight, -195, 1.8,   990, 20, 3.8, 3620);  // Süd-Teil
+    // Ost-Deich — Lücken für Terminal (z:-340..-60) und Stadthafen (z:+820..+1060)
+    this._box(grassLight,  195, 1.8, -1570, 20, 3.8, 2460);  // Nord-Teil
+    this._box(grassLight,  195, 1.8,   380, 20, 3.8,  880);  // Mitte-Teil
+    this._box(grassLight,  195, 1.8,  1930, 20, 3.8, 1740);  // Süd-Teil
 
-    // Insel im Fluss
-    this._box(grass, 20, -0.2, -100, 160, 8, 240);
-    this._box(grassLight, 20, 4.0, -100, 130, 2, 200);
+    // ── SANDBANK im Fluss (kein Blocker, nur optisch) ─────────────────────
+    const sandMat = new THREE.MeshStandardMaterial({ color: 0xb8a878, roughness: 1 });
+    this._box(sandMat, -60, 0.04, -520, 55, 0.4, 260);
+    this._box(sandMat, 100, 0.04,  420, 45, 0.4, 180);
 
-    // Hügelketten im Hintergrund (Silhouette)
-    const hillMat = new THREE.MeshStandardMaterial({ color: 0x1a3410, roughness: 1 });
-    for (let i = 0; i < 12; i++) {
-      const x = -3200 + i * 60;
-      const h = 60 + Math.sin(i * 0.9) * 30;
-      this._box(hillMat, x, h * 0.5 + 6, (i % 3 - 1) * 400, 180, h, 380);
+    // ── HÜGELSILHOUETTE beiderseits ───────────────────────────────────────
+    const hillMat = new THREE.MeshStandardMaterial({ color: 0x193810, roughness: 1 });
+    for (let i = 0; i < 16; i++) {
+      const h = 70 + Math.sin(i * 0.85) * 40;
+      this._box(hillMat, -3300 - i*55, h*0.5+8, (i%5-2)*380, 210, h, 420);
     }
-    for (let i = 0; i < 10; i++) {
-      const x = 3200 + i * 60;
-      const h = 50 + Math.cos(i * 1.1) * 25;
-      this._box(hillMat, x, h * 0.5 + 6, (i % 3 - 1) * 350, 160, h, 320);
+    for (let i = 0; i < 14; i++) {
+      const h = 60 + Math.cos(i * 1.1) * 32;
+      this._box(hillMat,  3300 + i*55, h*0.5+8, (i%5-2)*340, 190, h, 400);
     }
   }
 
@@ -427,23 +444,62 @@ export class WorldMap {
 
   // ── Tonnen / Bojen ────────────────────────────────────────────────────────
   _buildBuoys() {
-    // Realistische Fahrrinnentonnen — kein Leuchten, nur physische Objekte
-    const positions = [
-      { x: -80, z: -800, col: 0xbb1111 }, { x:  80, z: -800, col: 0x116611 },
-      { x: -80, z: -500, col: 0xbb1111 }, { x:  80, z: -500, col: 0x116611 },
-      { x: -80, z: -200, col: 0xbb1111 }, { x:  80, z: -200, col: 0x116611 },
-      { x: -80, z:  100, col: 0xbb1111 }, { x:  80, z:  100, col: 0x116611 },
-      { x: -80, z:  400, col: 0xbb1111 }, { x:  80, z:  400, col: 0x116611 },
-      { x: -80, z:  700, col: 0xbb1111 }, { x:  80, z:  700, col: 0x116611 },
-    ];
-    for (const b of positions) {
-      // Matte Farbe ohne emissive — sieht aus wie echte Tonne, nicht wie Leuchtpunkt
-      const mat = new THREE.MeshStandardMaterial({ color: b.col, roughness: 0.9, metalness: 0.1 });
-      this._cyl(mat, b.x, 1.5, b.z, 1.8, 2.2, 3, 8);   // Tonnenkörper
-      this._cyl(this.m.steel, b.x, 3.5, b.z, 0.3, 0.3, 4, 4); // Mast
-      // Kleines mattes Topplicht (kein PointLight)
-      this._sphere(mat, b.x, 5.8, b.z, 0.4);
+    // ── FAHRRINNENTONNEN — Backbord (rot, links) und Steuerbord (grün, rechts) ──
+    // Rot = Backbord (westliche Seite = x negativ), Grün = Steuerbord (östlich = x positiv)
+    const matRed  = new THREE.MeshStandardMaterial({ color: 0xcc1111, roughness: 0.8, metalness: 0.15,
+      emissive: 0x441111, emissiveIntensity: 0.4 });
+    const matGrn  = new THREE.MeshStandardMaterial({ color: 0x0e7a22, roughness: 0.8, metalness: 0.15,
+      emissive: 0x0a3810, emissiveIntensity: 0.4 });
+    const matStl  = this.m.steel;
+
+    const mkBuoy = (mat, bx, bz, signal = false) => {
+      this._cyl(mat,  bx, 1.5, bz, 1.8, 2.2,  3, 8);   // Körper
+      this._cyl(matStl, bx, 3.5, bz, 0.2, 0.2, 4, 4); // Mast
+      this._sphere(mat, bx, 5.8, bz, 0.45);             // Toppzeichen
+      if (signal) {
+        // Blinklichtsimulation (kleines PointLight)
+        const pl = new THREE.PointLight(mat.color, 6, 80, 2);
+        pl.position.set(bx, 5.8, bz);
+        this.scene.add(pl);
+      }
+    };
+
+    // Hauptfluss-Tonnen (z -2600 bis +2600 in 300m-Abständen)
+    for (let z = -2600; z <= 2600; z += 280) {
+      mkBuoy(matRed, -80, z);   // Backbord (rot, westlich)
+      mkBuoy(matGrn,  80, z);   // Steuerbord (grün, östlich)
     }
+
+    // ── KREUZUNGSMARKIERUNGEN AN HAFENEINFAHRTEN (große Orientierungsbaken) ──
+    // Nordheim-Einfahrt (z=-960, x≈-200): Sondertonnen mit Licht
+    mkBuoy(matRed, -200, -1100, true);  // Südliches Einfahrtszeichen
+    mkBuoy(matRed, -200,  -820, true);  // Nördliches Einfahrtszeichen
+    // Wegweiser-Mast bei Nordheim-Abzweig
+    this._buoyMarker(-160, -960, 'NORDHEIM', 0xf59e0b);
+
+    // Terminal-Ost-Einfahrt (z=-200, x≈+200)
+    mkBuoy(matGrn, 200, -340, true);
+    mkBuoy(matGrn, 200,  -60, true);
+    this._buoyMarker(160, -200, 'TERMINAL', 0x3b82f6);
+
+    // Stadthafen-Einfahrt (z=+940, x≈+200)
+    mkBuoy(matGrn, 200,  820, true);
+    mkBuoy(matGrn, 200, 1060, true);
+    this._buoyMarker(160, 940, 'STADTHAFEN', 0x22c55e);
+  }
+
+  // Wegweiser-Mast mit Tafel (wie ETS-Schild, nur maritim)
+  _buoyMarker(x, z, text, color) {
+    const { steel } = this.m;
+    const signMat = new THREE.MeshStandardMaterial({ color, roughness: 0.7 });
+    const textMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
+    this._cyl(steel, x, 6, z, 0.35, 0.40, 12, 5); // Mast
+    this._box(signMat, x + 8, 11, z, 18, 5, 2.5);  // Schild-Tafel
+    this._box(textMat, x + 8, 11, z + 1.3, 16, 3.5, 0.2); // helles Panel
+    // Beleuchtung
+    const pl = new THREE.PointLight(color, 12, 80, 2);
+    pl.position.set(x + 8, 13.5, z);
+    this.scene.add(pl);
   }
 
   // ── Leuchtturm ────────────────────────────────────────────────────────────

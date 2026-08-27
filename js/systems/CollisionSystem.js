@@ -2,11 +2,13 @@
 
 // ── Fahrrinne & Hafenarme ─────────────────────────────────────────────────────
 // Befahrbare Rechteck-Zonen (min/max x/z) — Schiff muss in mind. einer Zone sein
+// ZUSAMMENHÄNGENDES Wasserstraßen-Netz (ETS-Stil):
+// Hauptfluss + Hafenbecken als klar verbundenes System
 const NAV_ZONES = [
-  { xMin: -215, xMax: 215,  zMin: -2100, zMax: 2100 },  // Hauptfluss
-  { xMin: -460, xMax: -215, zMin: -1110, zMax: -810 },  // industriehafen-Arm
-  { xMin:  215, xMax:  460, zMin:  800,  zMax: 1060 },   // stadthafen-Arm
-  { xMin:  215, xMax:  730, zMin: -340,  zMax:  -60 },   // terminal_ost-Arm
+  { xMin: -200, xMax:  200, zMin: -2800, zMax: 2800 },   // Hauptfluss (Mitte)
+  { xMin: -500, xMax: -200, zMin: -1100, zMax: -820  },   // Nordheim-Hafenbecken
+  { xMin:  200, xMax:  480, zMin:  820,  zMax: 1060  },   // Stadthafen-Becken
+  { xMin:  200, xMax:  730, zMin: -340,  zMax:  -60  },   // Terminal-Ost-Becken
 ];
 
 // Wassertiefe in Fahrrinne (vereinfacht) und in Seichtzonen

@@ -235,7 +235,9 @@ function buildShip(scene) {
   group.add(cargoGroup);
   group._cargoGroup = cargoGroup;
 
-  group.position.set(PORTS[0].x, 0, PORTS[0].z - 70);
+  // Startposition: Mitte des Nordheim-Hafenbeckens (x=-380, z=-950 ist der Hafen-Mittelpunkt)
+  // Schiff zeigt nach Süden (heading=0 = Richtung Hauptfluss)
+  group.position.set(PORTS[0].x, 0, PORTS[0].z);
   scene.add(group);
   return group;
 }
