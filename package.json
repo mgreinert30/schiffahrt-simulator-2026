@@ -1,0 +1,11 @@
+{
+  "name": "schiffahrt-simulator-2026",
+  "version": "0.1.0",
+  "description": "Open-World Schifffahrts-Simulator — Phase 1 Prototyp",
+  "scripts": {
+    "dev": "npx serve . --listen 3000",
+    "start": "npx serve ."
+  },
+  "keywords": ["game", "simulator", "ship", "three.js"],
+  "license": "MIT"
+}

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schiffahrt Simulator 2026</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="hud-left">
+      <div class="hud-panel">
+        <div class="hud-label">GESCHWINDIGKEIT</div>
+        <div class="hud-value" id="speed-display">0.0 kn</div>
+      </div>
+      <div class="hud-panel">
+        <div class="hud-label">MOTOR</div>
+        <div class="hud-value" id="engine-display">STOP</div>
+        <div class="engine-bars">
+          <div class="engine-bar reverse" id="engine-rev"></div>
+          <div class="engine-center"></div>
+          <div class="engine-bar forward" id="engine-fwd"></div>
+        </div>
+      </div>
+      <div class="hud-panel">
+        <div class="hud-label">TREIBSTOFF</div>
+        <div class="hud-bar-wrap">
+          <div class="hud-bar-fill" id="fuel-bar"></div>
+        </div>
+        <div class="hud-small" id="fuel-text">100%</div>
+      </div>
+      <div class="hud-panel">
+        <div class="hud-label">RUDER</div>
+        <div class="rudder-display">
+          <div class="rudder-indicator" id="rudder-indicator"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="hud-top">
+      <span id="compass-display">N</span>
+      <span id="time-display">08:00</span>
+    </div>
+
+    <div id="hud-right">
+      <div class="hud-panel money-panel">
+        <div class="hud-label">KONTOSTAND</div>
+        <div class="hud-value money" id="money-display">€ 5.000</div>
+      </div>
+      <div class="hud-panel" id="job-panel">
+        <div class="hud-label">AUFTRAG</div>
+        <div id="job-title">Kein aktiver Auftrag</div>
+        <div id="job-cargo" class="hud-small"></div>
+        <div id="job-dest" class="hud-small"></div>
+        <div id="job-reward" class="hud-small reward"></div>
+      </div>
+    </div>
+
+    <div id="hud-bottom">
+      <div id="controls-hint">
+        <span>W/S — Motor</span>
+        <span>A/D — Ruder</span>
+        <span>M — Karte</span>
+        <span>C — Kamera</span>
+        <span>H — Horn</span>
+      </div>
+      <div id="notification" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- Port Prompt -->
+  <div id="port-prompt" class="hidden overlay-panel">
+    <div class="overlay-inner">
+      <div class="overlay-icon">⚓</div>
+      <h3 id="port-prompt-name">Hafen</h3>
+      <p id="port-prompt-desc"></p>
+      <div id="port-actions"></div>
+      <button class="btn-secondary" onclick="window.game?.portSystem.closePrompt()">Schließen</button>
+    </div>
+  </div>
+
+  <!-- Map Overlay -->
+  <div id="map-overlay" class="hidden overlay-panel">
+    <div class="overlay-inner map-inner">
+      <h3>🗺 Navigationskarte</h3>
+      <canvas id="map-canvas" width="640" height="480"></canvas>
+      <div id="map-legend">
+        <span><span class="legend-dot" style="background:#facc15"></span> Hafen</span>
+        <span><span class="legend-dot" style="background:#ef4444"></span> Dein Schiff</span>
+        <span><span class="legend-dot" style="background:#22c55e"></span> Ziel</span>
+      </div>
+      <button class="btn-secondary" id="close-map">✕ Karte schließen &nbsp;[M]</button>
+    </div>
+  </div>
+
+  <!-- Delivery Result -->
+  <div id="delivery-overlay" class="hidden overlay-panel">
+    <div class="overlay-inner">
+      <div class="overlay-icon">🏆</div>
+      <h3>Lieferung abgeschlossen!</h3>
+      <div id="delivery-details"></div>
+      <button class="btn-primary" id="close-delivery">Weiter</button>
+    </div>
+  </div>
+
+  <!-- Main Menu -->
+  <div id="main-menu">
+    <div id="menu-bg"></div>
+    <div id="menu-content">
+      <div class="menu-logo">⚓</div>
+      <h1>Schiffahrt Simulator<br><span class="year">2026</span></h1>
+      <p class="menu-subtitle">Vom kleinen Frachtschiff zur internationalen Reederei.</p>
+      <button class="btn-primary btn-large" id="btn-new-game">🚢 Neues Spiel starten</button>
+      <button class="btn-secondary btn-large" id="btn-load-game">📂 Spiel laden</button>
+      <div class="menu-version">Phase 1 Prototyp · Rhein-Region</div>
+    </div>
+  </div>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="hidden">
+    <div class="loading-content">
+      <div class="loading-icon">⚓</div>
+      <div class="loading-text" id="loading-text">Lade Welt...</div>
+      <div class="loading-bar-wrap">
+        <div class="loading-fill" id="loading-fill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
