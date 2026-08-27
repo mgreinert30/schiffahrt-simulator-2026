@@ -41,62 +41,175 @@ import { SoundSystem }      from './systems/SoundSystem.js';
 import { LockSystem }       from './systems/LockSystem.js';
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Schiff-Geometrie
+// MS Pionier — realistisches Rhein-Frachtschiff (~30m)
+// Koordinaten: bow = negative Z, stern = positive Z, Wasserlinie bei group.y=0
 // ──────────────────────────────────────────────────────────────────────────────
 function buildShip(scene) {
   const group = new THREE.Group();
 
-  const matHull   = new THREE.MeshStandardMaterial({ color: 0x1c2330, roughness: 0.65, metalness: 0.35 });
-  const matBottom = new THREE.MeshStandardMaterial({ color: 0x8b1010, roughness: 0.70 });
-  const matDeck   = new THREE.MeshStandardMaterial({ color: 0x3d2b1a, roughness: 1.0 });
-  const matCabin  = new THREE.MeshStandardMaterial({ color: 0xc8b89a, roughness: 0.65 });
-  const matBridge = new THREE.MeshStandardMaterial({ color: 0xddd0ba, roughness: 0.55 });
-  const matFunnel = new THREE.MeshStandardMaterial({ color: 0xcc2222, roughness: 0.80 });
-  const matSteel  = new THREE.MeshStandardMaterial({ color: 0x7a8090, roughness: 0.50, metalness: 0.55 });
-  const matGlass  = new THREE.MeshStandardMaterial({ color: 0x8ab8d0, roughness: 0.08, metalness: 0.85, transparent: true, opacity: 0.65 });
+  // Materialien
+  const matBottom = new THREE.MeshStandardMaterial({ color: 0x6e1010, roughness: 0.75, metalness: 0.15 }); // rot Antifouling
+  const matHull   = new THREE.MeshStandardMaterial({ color: 0x1a2535, roughness: 0.60, metalness: 0.32 }); // dunkel navy
+  const matDeck   = new THREE.MeshStandardMaterial({ color: 0x2e1e10, roughness: 1.0  }); // dunkles Teakdeck
+  const matHatch  = new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.65, metalness: 0.45 }); // Lukendeckel
+  const matCoam   = new THREE.MeshStandardMaterial({ color: 0x354050, roughness: 0.80, metalness: 0.22 }); // Lukenrahmen
+  const matCabin  = new THREE.MeshStandardMaterial({ color: 0xe0d8c8, roughness: 0.58, metalness: 0.06 }); // cremefarbener Aufbau
+  const matBridge = new THREE.MeshStandardMaterial({ color: 0xeeeadc, roughness: 0.48, metalness: 0.08 }); // Brücke weiß
+  const matGlass  = new THREE.MeshStandardMaterial({ color: 0x7ab8d0, roughness: 0.06, metalness: 0.82, transparent: true, opacity: 0.58 });
+  const matFunnel = new THREE.MeshStandardMaterial({ color: 0xf0a020, roughness: 0.72 }); // gelber Schornstein
+  const matBlack  = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.85 }); // Schornstein-Kappe
+  const matSteel  = new THREE.MeshStandardMaterial({ color: 0x7c8898, roughness: 0.42, metalness: 0.62 }); // Stahl
+  const matRail   = new THREE.MeshStandardMaterial({ color: 0x606878, roughness: 0.52, metalness: 0.55 }); // Reling
+  const matLife   = new THREE.MeshStandardMaterial({ color: 0xff6800, roughness: 0.80 }); // Rettungsring orange
 
   const B = (mat, x, y, z, w, h, d) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-    m.position.set(x, y, z); m.castShadow = m.receiveShadow = true;
-    group.add(m);
+    m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; group.add(m); return m;
   };
   const C = (mat, x, y, z, rt, rb, h, segs = 8) => {
     const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, segs), mat);
-    m.position.set(x, y, z); m.castShadow = true; group.add(m);
+    m.position.set(x, y, z); m.castShadow = true; group.add(m); return m;
   };
 
-  B(matBottom, 0, 0.0,  0,  6.8, 1.4, 22);   // Unterwasserschiff
-  B(matHull,   0, 1.6,  0,  6.5, 2.8, 22);   // Rumpf
-  B(matHull,   0, 0.8, -10.5, 5.5, 1.6, 3);  // Bug-Übergang
-  B(matHull,   0, 0.3, -12.2, 4.0, 1.0, 2);  // Bugspitze
-  B(matHull,   0, 1.2,  11.5, 6.0, 2.2, 2);  // Heck
-  B(matDeck,   0, 2.9, -4,   5.8, 0.4, 10);  // Deck
-  B(matSteel,  0, 3.1, -4,   4.6, 0.2, 7.5); // Lukendeckel
-  B(matSteel,  3.5, 2.5,  0, 0.2, 0.8, 20);  // BB-Reling
-  B(matSteel, -3.5, 2.5,  0, 0.2, 0.8, 20);  // SB-Reling
-  B(matCabin,  0, 4.5, 7.5, 6.2, 4.0, 6);   // Kabine
-  B(matBridge, 0, 8.0, 7.0, 5.8, 2.4, 5);   // Brücke
-  B(matGlass,  0, 8.1, 4.45, 5.2, 1.4, 0.1);// Brückenfenster
-  C(matFunnel, 0, 11.5, 8, 0.55, 0.75, 3.5); // Schornstein
-  C(new THREE.MeshStandardMaterial({ color: 0x111111 }), 0, 13, 8, 0.57, 0.57, 0.3);
-  C(matSteel, 0, 7, -8, 0.15, 0.18, 10, 4);  // Mast
-  B(matSteel, 0, 3.2, -10, 1.8, 0.6, 1.2);   // Ankerwinde
-  C(matSteel,  2.5, 3.4, 11, 0.3, 0.3, 1.2, 6);
-  C(matSteel, -2.5, 3.4, 11, 0.3, 0.3, 1.2, 6);
+  // ── RUMPF UNTER WASSERLINIE (rot Antifouling, y -1.1…+0.45) ─────────────
+  B(matBottom, 0,  -0.34, -1.0, 5.6, 1.5, 28);  // Hauptrumpf
+  B(matBottom, 0,  -0.40, -15.2, 4.8, 1.4, 2.8); // Bug-Stufe 1
+  B(matBottom, 0,  -0.52, -16.8, 3.4, 1.2, 2.2); // Bug-Stufe 2
+  B(matBottom, 0,  -0.68, -18.0, 1.8, 1.0, 1.8); // Bugspitze
 
-  // Navigationslichter
-  const mkLight = (col, x, y, z) => {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 6),
-      new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 2.5 }));
+  // ── RUMPF ÜBER WASSERLINIE (navy, y +0.45…+2.65) ────────────────────────
+  B(matHull,   0,  1.55, -1.0, 5.8, 2.2, 28);   // Hauptrumpf
+  B(matHull,   0,  1.45, -15.2, 5.2, 2.0, 2.8); // Bug-Stufe 1
+  B(matHull,   0,  1.30, -16.8, 3.7, 1.7, 2.2); // Bug-Stufe 2
+  B(matHull,   0,  1.10, -18.0, 2.0, 1.4, 1.8); // Bugspitze
+  B(matHull,   0,  1.55,  14.2, 5.5, 2.2, 2.5); // Heck-Stufe 1
+  B(matHull,   0,  1.35,  15.8, 4.8, 1.8, 1.8); // Heck-Stufe 2
+
+  // ── BULLWARK (Schutzwand auf Relinghöhe) ─────────────────────────────────
+  B(matHull,  2.98, 3.15, -1.0, 0.18, 1.15, 28);  // Steuerbord
+  B(matHull, -2.98, 3.15, -1.0, 0.18, 1.15, 28);  // Backbord
+
+  // ── HAUPTDECK ─────────────────────────────────────────────────────────────
+  B(matDeck,  0, 2.65,  -1.0, 5.44, 0.24, 28); // Decksplanken
+
+  // ── VORDECK ───────────────────────────────────────────────────────────────
+  B(matDeck,  0, 2.65, -14.8, 4.8, 0.24, 4.0); // Vordeck vor Luke
+  // Ankerwinde
+  B(matSteel, 0,  3.05, -16.2, 1.85, 0.45, 0.9); // Winden-Gehäuse
+  C(matSteel, 0.9, 3.30, -16.2, 0.26, 0.26, 0.3, 6); // Walze SB
+  C(matSteel,-0.9, 3.30, -16.2, 0.26, 0.26, 0.3, 6); // Walze BB
+
+  // ── LUKE (Cargo Hold) ─────────────────────────────────────────────────────
+  // Coaming-Rahmen (Wände um die Luke)
+  B(matCoam,  2.2, 3.35, -3.5, 0.22, 0.72, 18); // Längsträger SB
+  B(matCoam, -2.2, 3.35, -3.5, 0.22, 0.72, 18); // Längsträger BB
+  B(matCoam,  0, 3.35, -12.55, 4.0, 0.72, 0.30); // Querträger Bug
+  B(matCoam,  0, 3.35,  5.55, 4.0, 0.72, 0.30);  // Querträger Heck
+
+  // Lukendeckel (3 Platten-Sektionen)
+  B(matHatch, 0, 3.75, -10.2, 4.0, 0.20, 5.5); // Sektion A (Bug)
+  B(matHatch, 0, 3.75,  -4.7, 4.0, 0.20, 5.5); // Sektion B (Mitte)
+  B(matHatch, 0, 3.75,   0.8, 4.0, 0.20, 5.0); // Sektion C (Heck)
+
+  // ── RELING AM VORDECK ─────────────────────────────────────────────────────
+  B(matRail, 0, 3.90, -14.8, 4.6, 0.06, 4.0); // Untere Reling
+  B(matRail, 0, 4.55, -14.8, 4.6, 0.06, 4.0); // Obere Reling
+  // Stützen Vordeck
+  for (const sz of [-16.8, -15.8, -13.5, -12.5]) {
+    B(matRail, -2.3, 4.25, sz, 0.06, 1.5, 0.06);
+    B(matRail,  2.3, 4.25, sz, 0.06, 1.5, 0.06);
+  }
+
+  // ── AUFBAU / DECKHAUS (Heck) ──────────────────────────────────────────────
+  B(matCabin, 0, 5.15,  9.8, 5.5, 5.0, 12.5);  // Unteraufbau (Kabinen)
+  // Frontfenster des Aufbaus
+  B(matGlass, 0, 5.35, 3.50, 4.2, 1.20, 0.12); // Aufbau-Frontfenster
+
+  // ── BRÜCKE ────────────────────────────────────────────────────────────────
+  B(matBridge, 0, 9.05,  9.8, 5.3, 2.9, 10.0); // Brückenaufbau
+  B(matBridge, 0, 9.05, 15.4, 5.0, 2.9,  1.2); // Heckwand
+  // Frontscheibe (große Brückenscheibe)
+  B(matGlass, 0, 9.10,  4.75, 4.6, 2.0, 0.12); // Brücken-Frontglas
+  // Seitenfenster
+  B(matGlass,  2.67, 9.10,  9.8, 0.12, 1.8, 7.0); // SB-Seitenglas
+  B(matGlass, -2.67, 9.10,  9.8, 0.12, 1.8, 7.0); // BB-Seitenglas
+  // Brückendach + Peildeck
+  B(matCabin, 0, 10.55, 9.8, 5.5, 0.28, 10.2);  // Dachplatte
+  B(matBridge, 0, 11.1, 9.8, 5.2, 0.55, 10.0);  // Peildeck
+
+  // ── SCHORNSTEIN (gelb, schwarze Kappe) ────────────────────────────────────
+  C(matFunnel, 0, 13.3, 12.5, 0.60, 0.82, 4.0, 8); // Funnel
+  C(matBlack,  0, 15.35, 12.5, 0.64, 0.64, 0.5, 8); // Kappe
+
+  // ── BUGMAST ───────────────────────────────────────────────────────────────
+  C(matSteel, 0,  6.9, -15.5, 0.10, 0.14, 8.5, 5); // Mastrohr unten
+  C(matSteel, 0, 11.5, -15.5, 0.06, 0.08, 1.8, 4); // Mastrohr oben
+  // Radarschirm (flache Scheibe)
+  B(matSteel, 0, 12.55, -15.5, 1.3, 0.10, 0.90);  // Radar horizontal
+  B(matSteel, 0, 12.55, -15.0, 0.08, 0.50, 1.20);  // Radar Ständer
+
+  // ── HECK-MAST (kurz) ──────────────────────────────────────────────────────
+  C(matSteel, 0, 12.3, 15.2, 0.08, 0.10, 2.8, 4);  // Heck-Flaggenmast
+
+  // ── POLLER (Festmach-Poller) ──────────────────────────────────────────────
+  for (const [px, pz] of [[1.9,-17],[-1.9,-17],[2.1,-13.5],[-2.1,-13.5],[2.1,13.0],[-2.1,13.0],[2.1,15.5],[-2.1,15.5]]) {
+    C(matSteel, px, 3.2, pz, 0.13, 0.13, 0.60, 5);
+  }
+
+  // ── LÜFTUNGSKÖPFE (typisch für Frachtschiffe) ────────────────────────────
+  for (const [px, pz] of [[-1.3, 4.0],[1.3, 4.0],[-1.3,-10.5],[1.3,-10.5]]) {
+    C(matSteel, px, 3.42, pz, 0.20, 0.25, 0.60, 6);
+    B(matSteel, px, 3.78, pz, 0.52, 0.15, 0.52); // Haube oben
+  }
+
+  // ── RETTUNGSRINGE ─────────────────────────────────────────────────────────
+  const ringGeo = new THREE.TorusGeometry(0.34, 0.10, 6, 10);
+  for (const [px, pz] of [[3.1, 7.5],[3.1, 10.5],[-3.1, 7.5],[-3.1, 10.5]]) {
+    const rg = new THREE.Mesh(ringGeo, matLife);
+    rg.position.set(px, 5.2, pz);
+    rg.rotation.y = Math.PI / 2;
+    group.add(rg);
+  }
+
+  // ── NAVIGATIONSLICHTER ────────────────────────────────────────────────────
+  const mkNavLight = (col, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.17, 7, 5),
+      new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 3.5 }));
     m.position.set(x, y, z); group.add(m);
   };
-  mkLight(0x00ff44,  3.5, 5.5, -9);   // Steuerbord
-  mkLight(0xff2222, -3.5, 5.5, -9);   // Backbord
-  mkLight(0xffffff,  0, 12.5, -8);    // Mastlicht
+  mkNavLight(0x00ee44,  3.1, 4.2, -10.5); // Steuerbord grün
+  mkNavLight(0xff2020, -3.1, 4.2, -10.5); // Backbord rot
+  mkNavLight(0xffffff,  0, 12.6, -15.5);  // Toplicht (Mast)
+  mkNavLight(0xffffff,  0, 10.8,  15.5);  // Hecklicht
 
-  // Mastlicht-Schein
-  const ml = new THREE.PointLight(0xfff0c0, 4, 40, 2);
-  ml.position.set(0, 12.5, -8); group.add(ml);
+  // Mastlicht-Schein (PointLight)
+  const ml = new THREE.PointLight(0xfff8e0, 5, 55, 2);
+  ml.position.set(0, 12.6, -15.5); group.add(ml);
+
+  // ── CONTAINER-GRUPPE (sichtbar wenn Ladung an Bord) ──────────────────────
+  const cargoGroup = new THREE.Group();
+  const CONT_COLORS = [0x2244aa, 0xaa2020, 0x226020, 0xcc8000, 0x606870];
+  const colorPick   = [0, 2, 4, 1, 3, 0]; // je Container
+  for (let col = 0; col < 2; col++) {       // 2 Spalten (x)
+    for (let row = 0; row < 3; row++) {     // 3 Reihen (z)
+      const cGeo = new THREE.BoxGeometry(2.32, 2.50, 5.30);
+      const cMat = new THREE.MeshStandardMaterial({
+        color: CONT_COLORS[colorPick[col * 3 + row]],
+        roughness: 0.78, metalness: 0.20,
+      });
+      const cMesh = new THREE.Mesh(cGeo, cMat);
+      cMesh.position.set(
+        col === 0 ? -1.16 : 1.16,  // 2 Spalten-Positionen
+        4.52,                        // über Lukendeckel
+        -10.2 + row * 5.5           // z: Bug → Heck (-10.2, -4.7, +0.8)
+      );
+      cMesh.castShadow = true;
+      cargoGroup.add(cMesh);
+    }
+  }
+  cargoGroup.visible = false; // erst sichtbar wenn Ladung geladen
+  group.add(cargoGroup);
+  group._cargoGroup = cargoGroup;
 
   group.position.set(PORTS[0].x, 0, PORTS[0].z - 70);
   scene.add(group);
@@ -332,6 +445,19 @@ class Game {
     const fogColor = new THREE.Color(0x88c8e8).lerp(new THREE.Color(0x040810), 1 - dayT);
     this.scene.fog.color.copy(fogColor);
     if (this.postFX) { dayT < 0.3 || dayT > 0.8 ? this.postFX.setEvening() : this.postFX.setDay(); }
+
+    // ── Schiffs-Draft + Container-Sichtbarkeit ────────────────────────────
+    if (this.ship) {
+      // Tiefgang: Schiff sitzt tiefer wenn beladen (bis -0.65m)
+      const cargoRatio = Math.min(1, (this.physics.cargoMass || 0) / 80000);
+      const targetDraftY = -cargoRatio * 0.65;
+      this.ship.position.y += (targetDraftY - this.ship.position.y) * Math.min(1, dt * 0.9);
+
+      // Container sichtbar wenn Ladung an Bord
+      if (this.ship._cargoGroup) {
+        this.ship._cargoGroup.visible = (this.physics.cargoMass || 0) > 100;
+      }
+    }
 
     // ── Wasser & Wake ──────────────────────────────────────────────────────
     this.water.update(dt, this.camera);

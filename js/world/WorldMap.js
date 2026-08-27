@@ -60,6 +60,7 @@ export class WorldMap {
     this.scene = scene;
     this.m     = makeMats();
     this._buildTerrain();
+    this._buildShoreTransition();
     this._buildRoads();
     this._buildBridge();
     this._buildPorts();
@@ -587,6 +588,73 @@ export class WorldMap {
     this.scene.add(m);
     return m;
   }
+  // ── Ufer-Übergangszone: Schlamm, Kies, Steine ─────────────────────────────
+  _buildShoreTransition() {
+    const rng      = this._rng(9001);
+    const mudMat   = new THREE.MeshStandardMaterial({ color: 0x3a3020, roughness: 1 });
+    const gravelMat= new THREE.MeshStandardMaterial({ color: 0x7a7260, roughness: 1 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6e6858, roughness: 1 });
+    const stoneDkMat = new THREE.MeshStandardMaterial({ color: 0x504840, roughness: 1 });
+    const wetMat   = new THREE.MeshStandardMaterial({ color: 0x283820, roughness: 1 }); // Nasses Gras
+
+    for (const side of [-1, 1]) {
+      const sx = side;
+      // Schlamm-Streifen am Wasserrand
+      const mudGeo = new THREE.PlaneGeometry(18, 8200);
+      mudGeo.rotateX(-Math.PI / 2);
+      const mud = new THREE.Mesh(mudGeo, mudMat);
+      mud.position.set(sx * 214, -0.04, 0);
+      mud.receiveShadow = true;
+      this.scene.add(mud);
+
+      // Kies-Streifen
+      const grvGeo = new THREE.PlaneGeometry(22, 8200);
+      grvGeo.rotateX(-Math.PI / 2);
+      const grv = new THREE.Mesh(grvGeo, gravelMat);
+      grv.position.set(sx * 227, -0.02, 0);
+      grv.receiveShadow = true;
+      this.scene.add(grv);
+
+      // Nasses Gras / Feuchtwiese
+      const wetGeo = new THREE.PlaneGeometry(30, 8200);
+      wetGeo.rotateX(-Math.PI / 2);
+      const wet = new THREE.Mesh(wetGeo, wetMat);
+      wet.position.set(sx * 248, 0.01, 0);
+      wet.receiveShadow = true;
+      this.scene.add(wet);
+    }
+
+    // Einzelne Steine (InstancedMesh für Performance)
+    const stoneGeo = new THREE.BoxGeometry(1, 1, 1);
+    const stones1  = new THREE.InstancedMesh(stoneGeo, stoneMat,  400);
+    const stones2  = new THREE.InstancedMesh(stoneGeo, stoneDkMat, 300);
+    stones1.receiveShadow = stones1.castShadow = true;
+    stones2.receiveShadow = stones2.castShadow = true;
+
+    const dummy = new THREE.Object3D();
+    let i1 = 0, i2 = 0;
+
+    for (let i = 0; i < 700; i++) {
+      const side = rng() < 0.5 ? -1 : 1;
+      const x    = (205 + rng() * 40) * side;
+      const z    = (rng() - 0.5) * 8000;
+      const s    = 0.15 + rng() * 0.65;
+
+      dummy.position.set(x, s * 0.22 - 0.15, z);
+      dummy.scale.set(s, s * 0.45, s * (0.7 + rng() * 0.7));
+      dummy.rotation.set(rng() * 0.35, rng() * Math.PI * 2, rng() * 0.3);
+      dummy.updateMatrix();
+
+      if (rng() < 0.58 && i1 < 400) stones1.setMatrixAt(i1++, dummy.matrix);
+      else if (i2 < 300)             stones2.setMatrixAt(i2++, dummy.matrix);
+    }
+    stones1.count = i1; stones2.count = i2;
+    stones1.instanceMatrix.needsUpdate = true;
+    stones2.instanceMatrix.needsUpdate = true;
+    this.scene.add(stones1);
+    this.scene.add(stones2);
+  }
+
   _rng(seed) {
     let s = seed >>> 0;
     return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 0xffffffff; };
