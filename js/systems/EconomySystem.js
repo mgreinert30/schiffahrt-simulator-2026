@@ -1,29 +1,23 @@
-// EconomySystem — Geldverwaltung und Transaktionshistorie
-
+// EconomySystem — Wrapper um GameState für Geldverwaltung
 export class EconomySystem {
-  constructor(startMoney = 5000) {
-    this.money   = startMoney;
-    this.history = [];
+  constructor(state) {
+    this.state = state;
   }
 
   add(amount, label = '') {
-    this.money += amount;
-    this.history.push({ type: 'income',  amount, label, time: Date.now() });
+    this.state.addMoney(amount, label);
   }
 
   spend(amount, label = '') {
-    if (this.money < amount) return false;
-    this.money -= amount;
-    this.history.push({ type: 'expense', amount, label, time: Date.now() });
-    return true;
+    return this.state.spendMoney(amount);
   }
 
   canAfford(amount) {
-    return this.money >= amount;
+    return this.state.money >= amount;
   }
 
-  // Formatierung: € 12.500
+  get money()     { return this.state.money; }
   get formatted() {
-    return '€ ' + Math.floor(this.money).toLocaleString('de-DE');
+    return '€ ' + Math.floor(this.state.money).toLocaleString('de-DE');
   }
 }

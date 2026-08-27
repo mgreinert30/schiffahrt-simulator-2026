@@ -16,19 +16,20 @@
 </head>
 <body>
 
-  <!-- Canvas -->
   <canvas id="game-canvas"></canvas>
 
-  <!-- HUD -->
+  <!-- ═══════════════ HUD ═══════════════ -->
   <div id="hud" class="hidden">
+
+    <!-- Links: Schiffsstatus -->
     <div id="hud-left">
       <div class="hud-panel">
         <div class="hud-label">GESCHWINDIGKEIT</div>
         <div class="hud-value" id="speed-display">0.0 kn</div>
       </div>
       <div class="hud-panel">
-        <div class="hud-label">MOTOR</div>
-        <div class="hud-value" id="engine-display">STOP</div>
+        <div class="hud-label">TELEGRAPH</div>
+        <div class="hud-value engine-val" id="engine-display">STOP</div>
         <div class="engine-bars">
           <div class="engine-bar reverse" id="engine-rev"></div>
           <div class="engine-center"></div>
@@ -37,10 +38,13 @@
       </div>
       <div class="hud-panel">
         <div class="hud-label">TREIBSTOFF</div>
-        <div class="hud-bar-wrap">
-          <div class="hud-bar-fill" id="fuel-bar"></div>
-        </div>
+        <div class="hud-bar-wrap"><div class="hud-bar-fill" id="fuel-bar"></div></div>
         <div class="hud-small" id="fuel-text">100%</div>
+      </div>
+      <div class="hud-panel">
+        <div class="hud-label">RUMPFZUSTAND</div>
+        <div class="hud-bar-wrap"><div class="hud-bar-fill dmg-bar" id="damage-bar"></div></div>
+        <div class="hud-small" id="damage-text">100%</div>
       </div>
       <div class="hud-panel">
         <div class="hud-label">RUDER</div>
@@ -50,94 +54,152 @@
       </div>
     </div>
 
+    <!-- Oben: Kompass + Uhrzeit + Kameramodus -->
     <div id="hud-top">
       <span id="compass-display">N</span>
       <span id="time-display">08:00</span>
+      <span id="cam-mode-display" class="cam-label">CAM: Verfolgung</span>
     </div>
 
+    <!-- Rechts: Kontostand + Auftrag -->
     <div id="hud-right">
       <div class="hud-panel money-panel">
         <div class="hud-label">KONTOSTAND</div>
         <div class="hud-value money" id="money-display">€ 5.000</div>
       </div>
+      <div id="cargo-badge" class="cargo-badge" style="display:none"></div>
       <div class="hud-panel" id="job-panel">
         <div class="hud-label">AUFTRAG</div>
         <div id="job-title">Kein aktiver Auftrag</div>
-        <div id="job-cargo" class="hud-small"></div>
+        <div id="job-cargo" class="hud-small">Fahre in einen Hafen [F]</div>
         <div id="job-dest" class="hud-small"></div>
-        <div id="job-reward" class="hud-small reward"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div id="job-reward" class="hud-small reward"></div>
+          <div id="job-distance" class="hud-small dist-label"></div>
+        </div>
       </div>
     </div>
 
+    <!-- Unten: Steuerungshinweise + Interaktion + Nachrichten -->
     <div id="hud-bottom">
       <div id="controls-hint">
-        <span>W/S — Motor</span>
+        <span>W/S — Telegraph</span>
         <span>A/D — Ruder</span>
+        <span>F — Interaktion</span>
         <span>M — Karte</span>
         <span>C — Kamera</span>
         <span>H — Horn</span>
+        <span>Tab — Debug</span>
+      </div>
+      <div id="interaction-prompt" class="hidden">
+        <span id="interaction-text">F — Aktion</span>
       </div>
       <div id="notification" class="hidden"></div>
     </div>
+
+    <!-- Tiefenwarnung -->
+    <div id="depth-warning" class="hidden"></div>
+
+  </div><!-- /#hud -->
+
+  <!-- ═══════════════ Debug-Overlay ═══════════════ -->
+  <div id="debug-overlay" class="hidden"></div>
+
+  <!-- ═══════════════ Auftragsmarkt ═══════════════ -->
+  <div id="job-market-overlay" class="hidden overlay-panel">
+    <div class="overlay-inner jm-inner">
+      <h3 id="job-market-port-name">Auftragsmarkt</h3>
+      <div id="job-market-list" class="jm-list"></div>
+      <button class="btn-secondary" id="close-job-market">✕ Schließen</button>
+    </div>
   </div>
 
-  <!-- Port Prompt -->
+  <!-- ═══════════════ Hafen-Prompt (Legacy) ═══════════════ -->
   <div id="port-prompt" class="hidden overlay-panel">
     <div class="overlay-inner">
       <div class="overlay-icon">⚓</div>
       <h3 id="port-prompt-name">Hafen</h3>
       <p id="port-prompt-desc"></p>
       <div id="port-actions"></div>
-      <button class="btn-secondary" onclick="window.game?.portSystem.closePrompt()">Schließen</button>
+      <button class="btn-secondary" onclick="window.game?.portSystem.closePrompt?.()">Schließen</button>
     </div>
   </div>
 
-  <!-- Map Overlay -->
+  <!-- ═══════════════ Karte ═══════════════ -->
   <div id="map-overlay" class="hidden overlay-panel">
     <div class="overlay-inner map-inner">
       <h3>🗺 Navigationskarte</h3>
-      <canvas id="map-canvas" width="640" height="480"></canvas>
+      <canvas id="map-canvas" width="680" height="520"></canvas>
       <div id="map-legend">
         <span><span class="legend-dot" style="background:#facc15"></span> Hafen</span>
-        <span><span class="legend-dot" style="background:#ef4444"></span> Dein Schiff</span>
         <span><span class="legend-dot" style="background:#22c55e"></span> Ziel</span>
+        <span><span class="legend-dot" style="background:#ef4444"></span> Dein Schiff</span>
+        <span><span class="legend-dot" style="background:#aaa"></span> NPC-Schiffe</span>
       </div>
-      <button class="btn-secondary" id="close-map">✕ Karte schließen &nbsp;[M]</button>
+      <button class="btn-secondary" id="close-map">✕ Karte schließen [M]</button>
     </div>
   </div>
 
-  <!-- Delivery Result -->
+  <!-- ═══════════════ Treibstoff-Dialog ═══════════════ -->
+  <div id="fuel-dialog" class="hidden overlay-panel">
+    <div class="overlay-inner dialog-inner">
+      <div class="overlay-icon">⛽</div>
+      <h3>Tanken</h3>
+      <div class="dialog-row"><span>Menge</span><span id="fuel-liters">— L</span></div>
+      <div class="dialog-row"><span>Kosten</span><span id="fuel-cost-display">€ —</span></div>
+      <div class="dialog-btns">
+        <button class="btn-primary" id="fuel-confirm">Jetzt tanken</button>
+        <button class="btn-secondary" id="fuel-cancel">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Reparatur-Dialog ═══════════════ -->
+  <div id="repair-dialog" class="hidden overlay-panel">
+    <div class="overlay-inner dialog-inner">
+      <div class="overlay-icon">🔧</div>
+      <h3>Reparatur</h3>
+      <div class="dialog-row"><span>Schaden</span><span id="repair-dmg">— %</span></div>
+      <div class="dialog-row"><span>Kosten</span><span id="repair-cost-display">€ —</span></div>
+      <div class="dialog-btns">
+        <button class="btn-primary" id="repair-confirm">Reparieren</button>
+        <button class="btn-secondary" id="repair-cancel">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ Lieferungs-Ergebnis ═══════════════ -->
   <div id="delivery-overlay" class="hidden overlay-panel">
     <div class="overlay-inner">
       <div class="overlay-icon">🏆</div>
-      <h3>Lieferung abgeschlossen!</h3>
+      <h3>Auftrag abgeschlossen!</h3>
       <div id="delivery-details"></div>
       <button class="btn-primary" id="close-delivery">Weiter</button>
     </div>
   </div>
 
-  <!-- Main Menu -->
+  <!-- ═══════════════ Hauptmenü ═══════════════ -->
   <div id="main-menu">
     <div id="menu-bg"></div>
     <div id="menu-content">
       <div class="menu-logo">⚓</div>
       <h1>Schiffahrt Simulator<br><span class="year">2026</span></h1>
       <p class="menu-subtitle">Vom kleinen Frachtschiff zur internationalen Reederei.</p>
-      <button class="btn-primary btn-large" id="btn-new-game">🚢 Neues Spiel starten</button>
-      <button class="btn-secondary btn-large" id="btn-load-game">📂 Spiel laden</button>
+      <button class="btn-primary btn-large" id="btn-new-game">🚢 Neues Spiel</button>
+      <button class="btn-secondary btn-large" id="btn-load-game">📂 Spielstand laden</button>
       <div class="quality-selector">
         <div class="quality-label">GRAFIKQUALITÄT</div>
         <div class="quality-btns">
           <button class="btn-quality" id="btn-quality-low">Niedrig</button>
-          <button class="btn-quality active" id="btn-quality-medium">Mittel</button>
+          <button class="btn-quality" id="btn-quality-medium">Mittel</button>
           <button class="btn-quality" id="btn-quality-high">Hoch</button>
         </div>
       </div>
-      <div class="menu-version">Graphics Upgrade · Rhein-Region</div>
+      <div class="menu-version">v2.0 · Gameplay Update · Rhein-Region</div>
     </div>
   </div>
 
-  <!-- Loading Screen -->
+  <!-- ═══════════════ Ladescreen ═══════════════ -->
   <div id="loading-screen" class="hidden">
     <div class="loading-content">
       <div class="loading-icon">⚓</div>

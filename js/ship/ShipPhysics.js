@@ -1,102 +1,151 @@
-// ShipPhysics — Schiffsphysik-Simulation
-// Realistische Trägheit: langsame Beschleunigung, langer Bremsweg, windabhängiges Handling
+// ShipPhysics — Massenträgheit, Telegraph, Hydrodynamik, Auftrieb
+
+// Telegraph-Stufen: -4 (Full Astern) … 0 (Stop) … +4 (Full Ahead)
+export const TELEGRAPH = {
+  FULL_ASTERN: -4, HALF_ASTERN: -3, SLOW_ASTERN: -2, DEAD_SLOW_ASTERN: -1,
+  STOP: 0,
+  DEAD_SLOW_AHEAD: 1, SLOW_AHEAD: 2, HALF_AHEAD: 3, FULL_AHEAD: 4,
+};
+
+// Ziel-Geschwindigkeit pro Stufe (m/s) — Vorwärts positiv
+const TARGET_SPEED = [-2.0, -1.4, -0.9, -0.45, 0, 0.85, 2.0, 3.8, 6.5];
+// Index = level + 4  (level -4 → index 0)
+
+// Schiff-Basisparameter (leeres Frachtschiff)
+const BASE = {
+  mass:          90000,  // kg (90 t leer)
+  maxCargo:      80000,  // kg (80 t max Zuladung)
+  length:        24,     // m
+  width:         6.5,    // m
+  draftEmpty:    1.4,    // m
+  draftFull:     2.0,    // m
+  motorForce:    90000,  // N (~370 kW)
+  dragCoeff:     0.55,   // Längswiderstand
+  turnDragCoeff: 3.2,    // Drehdämpfung
+  maxTurnRate:   0.45,   // rad/s
+};
 
 export class ShipPhysics {
-  constructor(config = {}) {
-    // Fahrzeug-Parameter (Level-1-Frachtschiff)
-    this.maxSpeed       = config.maxSpeed      ?? 6.5;   // m/s vorwärts (~12 kn)
-    this.maxReverse     = config.maxReverse    ?? 2.0;   // m/s rückwärts
-    this.acceleration   = config.acceleration  ?? 1.8;   // m/s²
-    this.deceleration   = config.deceleration  ?? 0.9;   // m/s² (eigene Bremsung)
-    this.dragLinear     = config.dragLinear    ?? 0.55;  // Wasserwiderstand
-    this.dragAngular    = config.dragAngular   ?? 3.5;   // Ruder-Dämpfung
-    this.maxTurnRate    = config.maxTurnRate   ?? 0.55;  // rad/s bei Langsamfahrt
-    this.turnSpeedScale = config.turnSpeedScale ?? 0.6;  // Wendeeffizienz bei Hochgeschwindigkeit
-
+  constructor() {
     // Zustand
-    this.speed          = 0;   // m/s (positiv = vorwärts)
-    this.angularSpeed   = 0;   // rad/s (positiv = links / CCW)
-    this.heading        = 0;   // rad (world space rotation.y)
+    this.speed        = 0;      // m/s (+ = vorwärts)
+    this.angularSpeed = 0;      // rad/s
+    this.heading      = 0;      // rad
+    this.x            = 0;
+    this.z            = 0;
 
-    // Eingaben (werden von ShipController gesetzt)
-    this.throttle       = 0;   // -1 .. +1
-    this.rudder         = 0;   // -1 (rechts) .. +1 (links)
+    // Telegraph
+    this.telegraphLevel  = 0;   // -4 … +4 (gesetzt von Controller)
+    this._motorEnabled   = true;
 
-    // Position (wird in main.js auf die Ship-Gruppe übertragen)
-    this.x = 0;
-    this.z = 0;
+    // Ladung
+    this.cargoMass    = 0;      // kg
 
-    // Treibstoff (0-100)
-    this.fuel = 100;
-    this.fuelConsumption = config.fuelConsumption ?? 0.004; // % pro Sekunde bei Volllast
+    // Extern gesetzte Scaler (von Damage/Cargo-System)
+    this.powerFactor    = 1.0;
+    this.maxSpeedFactor = 1.0;
 
-    // Schiffsschaden (0-100, 0=kein Schaden)
-    this.damage = 0;
+    // Abgeleitete Werte (readonly)
+    this.rudder       = 0;      // -1 … +1 (von Controller)
+    this.throttle     = 0;      // -1 … +1 (für HUD-Kompatibilität)
   }
 
+  // ── Gesamtmasse ────────────────────────────────────────────────────────────
+  get totalMass()  { return BASE.mass + this.cargoMass; }
+  get massRatio()  { return this.totalMass / BASE.mass; } // 1.0 leer … ~1.89 voll
+
+  // ── Tiefgang ───────────────────────────────────────────────────────────────
+  get draft() {
+    const t = this.cargoMass / BASE.maxCargo;
+    return BASE.draftEmpty + t * (BASE.draftFull - BASE.draftEmpty);
+  }
+
+  // ── Effektive Höchstgeschwindigkeit ───────────────────────────────────────
+  get effectiveMaxSpeed() {
+    const base = TARGET_SPEED[TELEGRAPH.FULL_AHEAD + 4];
+    // Schwerere Ladung → etwas langsamer
+    const loadPenalty = 1 - this.cargoMass / BASE.maxCargo * 0.15;
+    return base * loadPenalty * this.maxSpeedFactor;
+  }
+
+  // ── Geschwindigkeit in Knoten ──────────────────────────────────────────────
+  get speedKnots() { return this.speed * 1.94384; }
+
+  // ── Kompass-Richtung ──────────────────────────────────────────────────────
+  get compassHeading() {
+    const deg = ((this.heading * 180 / Math.PI) % 360 + 360) % 360;
+    const dirs = ['N','NO','O','SO','S','SW','W','NW'];
+    return dirs[Math.round(deg / 45) % 8];
+  }
+
+  // ── Motor ein/aus ─────────────────────────────────────────────────────────
+  setMotorEnabled(on) { this._motorEnabled = on; }
+
+  // ── Physics-Step ──────────────────────────────────────────────────────────
   update(dt) {
-    const absFuel = this.fuel > 0;
+    if (dt <= 0) return;
 
-    // --- Längsgeschwindigkeit ---
-    if (this.throttle > 0 && absFuel) {
-      this.speed += this.throttle * this.acceleration * dt;
-    } else if (this.throttle < 0 && absFuel) {
-      // Rückwärts: langsamere Beschleunigung
-      this.speed += this.throttle * this.deceleration * dt;
+    const level    = this._motorEnabled ? this.telegraphLevel : 0;
+    const target   = TARGET_SPEED[level + 4];  // Zielgeschwindigkeit für diesen Level
+    const mass     = this.totalMass;
+
+    // Motorschub (reduziert durch Schaden)
+    const forceFactor  = this.powerFactor;
+    const motorForce   = BASE.motorForce * forceFactor;
+
+    // Beschleunigung = Kraft / Masse
+    const accelRaw = motorForce / mass;         // m/s²
+
+    // Proportionale Kraft: mehr Kraft wenn weit vom Ziel
+    const delta    = target - this.speed;
+    const thrust   = Math.sign(delta) * Math.min(Math.abs(delta) * 2.5, 1) * accelRaw;
+
+    // Hydrodynamischer Widerstand (v²): stark bei hoher Geschwindigkeit
+    const drag     = this.speed * Math.abs(this.speed) * BASE.dragCoeff / (mass / BASE.mass);
+
+    // Netto-Beschleunigung
+    const accel    = (thrust - drag * 0.5) ;
+    this.speed    += accel * dt;
+
+    // Zusätzlicher Drag damit das Schiff nie über Ziel hinaus schießt
+    if (Math.abs(this.speed) > Math.abs(target) && Math.sign(this.speed) === Math.sign(target)) {
+      this.speed  += (target - this.speed) * Math.min(1, dt * 1.5);
     }
 
-    // Wasserwiderstand
-    this.speed -= this.speed * this.dragLinear * dt;
+    // Sicherheitsbegrenzer
+    const absMax = 7.5 * this.maxSpeedFactor;
+    this.speed    = Math.max(-2.5, Math.min(absMax, this.speed));
+    if (Math.abs(this.speed) < 0.005) this.speed = 0;
 
-    // Geschwindigkeitsgrenzen
-    this.speed = Math.max(-this.maxReverse, Math.min(this.maxSpeed, this.speed));
+    // HUD-Kompatibilitäts-Property
+    this.throttle = this.speed / 6.5;
 
-    // Sehr kleine Geschwindigkeit auf Null setzen
-    if (Math.abs(this.speed) < 0.01) this.speed = 0;
+    // ── Ruderphysik ─────────────────────────────────────────────────────────
+    // Wirkung proportional zur Fahrtgeschwindigkeit (bei Stand: ~5 %)
+    const speedFactor = Math.max(0.05, Math.min(1, Math.abs(this.speed) / 4.0));
+    // Kurventrägheit abhängig von Masse
+    const turnInertia = BASE.mass / this.totalMass;
+    const turnRate    = BASE.maxTurnRate * speedFactor * turnInertia;
 
-    // --- Winkelgeschwindigkeit (Ruder) ---
-    // Wendeeffizienz steigt mit Fahrtgeschwindigkeit (kaum Wenden im Stand)
-    const speedFactor = Math.min(1, Math.abs(this.speed) / (this.maxSpeed * 0.5));
-    const effectiveTurnRate = this.maxTurnRate * (0.15 + speedFactor * this.turnSpeedScale);
+    this.angularSpeed += this.rudder * turnRate * dt * 4;
+    this.angularSpeed -= this.angularSpeed * BASE.turnDragCoeff * dt;
+    if (Math.abs(this.angularSpeed) < 0.0003) this.angularSpeed = 0;
 
-    if (this.rudder !== 0) {
-      this.angularSpeed += this.rudder * effectiveTurnRate * dt * 3;
-    }
+    this.heading  += this.angularSpeed * dt;
 
-    // Ruder-Dämpfung
-    this.angularSpeed -= this.angularSpeed * this.dragAngular * dt;
-    if (Math.abs(this.angularSpeed) < 0.0005) this.angularSpeed = 0;
-
-    // Kurs aktualisieren
-    this.heading += this.angularSpeed * dt;
-
-    // Position aktualisieren (Three.js: vorwärts = -Z bei heading=0)
+    // Position (vorwärts = -Z bei heading 0)
     this.x -= Math.sin(this.heading) * this.speed * dt;
     this.z -= Math.cos(this.heading) * this.speed * dt;
-
-    // Treibstoffverbrauch (proportional zum Motoranteil)
-    if (absFuel && this.throttle !== 0) {
-      this.fuel -= Math.abs(this.throttle) * this.fuelConsumption * dt;
-      this.fuel = Math.max(0, this.fuel);
-    }
   }
 
-  // Geschwindigkeit in Knoten
-  get speedKnots() {
-    return this.speed * 1.94384;
-  }
-
-  // Kursrichtung als Kompass-Buchstabe
-  get compassHeading() {
-    const h = ((this.heading * 180 / Math.PI) % 360 + 360) % 360;
-    const dirs = ['N','NO','O','SO','S','SW','W','NW','N'];
-    return dirs[Math.round(h / 45) % 8];
-  }
-
-  // Kollisionsschaden
-  applyCollision(force) {
-    this.damage = Math.min(100, this.damage + force * 10);
-    this.speed *= 0.2;
+  // ── Kollisionsreaktion ────────────────────────────────────────────────────
+  bounce(normalX, normalZ) {
+    // Reflektiere Geschwindigkeit an Oberflächennormale und dämpfe
+    const dot     = this.speed * (Math.sin(this.heading) * normalX + Math.cos(this.heading) * normalZ);
+    this.speed   *= 0.15;
     this.angularSpeed *= 0.3;
+    // Schiff leicht zurückdrängen
+    this.x += normalX * 1.5;
+    this.z += normalZ * 1.5;
   }
 }
