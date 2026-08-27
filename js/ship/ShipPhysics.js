@@ -46,6 +46,10 @@ export class ShipPhysics {
     this.powerFactor    = 1.0;
     this.maxSpeedFactor = 1.0;
 
+    // Wind-Drift (gesetzt von WeatherSystem über Game-Loop)
+    this.windX = 0;
+    this.windZ = 0;
+
     // Abgeleitete Werte (readonly)
     this.rudder       = 0;      // -1 … +1 (von Controller)
     this.throttle     = 0;      // -1 … +1 (für HUD-Kompatibilität)
@@ -137,6 +141,11 @@ export class ShipPhysics {
     // Position (vorwärts = -Z bei heading 0)
     this.x -= Math.sin(this.heading) * this.speed * dt;
     this.z -= Math.cos(this.heading) * this.speed * dt;
+
+    // Wind-Drift (seitlich, subtil — stärker bei leichtem Schiff)
+    const windFactor = 0.0025 / this.massRatio;
+    this.x += this.windX * windFactor * dt;
+    this.z += this.windZ * windFactor * dt;
   }
 
   // ── Kollisionsreaktion ────────────────────────────────────────────────────

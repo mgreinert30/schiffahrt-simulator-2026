@@ -36,6 +36,9 @@ import { UIManager }        from './ui/UIManager.js';
 import { CameraController } from './camera/CameraController.js';
 import { TutorialSystem }   from './systems/TutorialSystem.js';
 import { ShipShopSystem }   from './systems/ShipShopSystem.js';
+import { WeatherSystem }    from './systems/WeatherSystem.js';
+import { SoundSystem }      from './systems/SoundSystem.js';
+import { LockSystem }       from './systems/LockSystem.js';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Schiff-Geometrie
@@ -173,6 +176,10 @@ class Game {
     this.camCtrl       = new CameraController(this.camera);
     this.shipShop      = new ShipShopSystem(this);
     this.tutorial      = null; // wird nach _load() erstellt (DOM muss bereit sein)
+    this.weather       = null;
+    this.sound         = new SoundSystem();
+    this.lock          = null;
+    this._radioTimer   = 70;   // Hafenfunk-Timer
 
     // Resize
     window.addEventListener('resize', () => {
@@ -240,6 +247,10 @@ class Game {
       this.postFX = new PostProcessing(this.renderer, this.scene, this.camera, this.quality.name);
     }
 
+    this._setLoading('Wetter & Sound...', 96);
+    this.weather = new WeatherSystem(this.scene);
+    this.lock    = new LockSystem(this.scene, this.physics);
+
     this._setLoading('Fertig!', 100);
     // Ship-Shop Physik-Werte anwenden
     this.shipShop.applyToPhysics(this.physics);
@@ -253,6 +264,27 @@ class Game {
 
     const dt = Math.min(this.clock.getDelta(), 0.05);
     this._totalTime += dt;
+
+    // ── Wetter ────────────────────────────────────────────────────────────
+    if (this.weather) {
+      this.weather.update(dt);
+      // Wind auf Physik übertragen
+      this.physics.windX = this.weather.windX;
+      this.physics.windZ = this.weather.windZ;
+    }
+
+    // ── Sound ─────────────────────────────────────────────────────────────
+    this.sound.update(this.physics.telegraphLevel, this.physics.speed, this.weather);
+
+    // ── Schleuse ──────────────────────────────────────────────────────────
+    this.lock?.update(dt);
+
+    // ── Hafenfunk (zufällige Ambient-Nachrichten) ──────────────────────────
+    this._radioTimer -= dt;
+    if (this._radioTimer <= 0) {
+      this._radioTimer = 55 + Math.random() * 90;
+      this._playRandomRadio();
+    }
 
     // ── Fuel → Motor-Enable ────────────────────────────────────────────────
     const fuelSig = this.fuelSystem.update(dt, Math.abs(this.physics.telegraphLevel));
@@ -273,6 +305,7 @@ class Game {
     const col = this.collisionSystem.update(dt);
     if (col.collision && col.dmg > 0) {
       this.ui.showNotification(`💥 Kollision! -${col.dmg.toFixed(0)}% Rumpf`, 2500);
+      this.sound.playCollision(Math.abs(this.physics.speed));
     }
     if (col.grounded) {
       this.ui.showNotification('⚠️ GRUNDBERÜHRUNG! Langsamer fahren!', 800);
@@ -324,6 +357,26 @@ class Game {
     // ── Render ─────────────────────────────────────────────────────────────
     if (this.postFX) this.postFX.render();
     else             this.renderer.render(this.scene, this.camera);
+  }
+
+  // ── Hafenfunk ─────────────────────────────────────────────────────────────
+  _playRandomRadio() {
+    const wx = this.weather?.stateId ?? 'clear';
+    const port = this.portSystem?.nearPort;
+    const msgs = [
+      '📻 Kanal 16: Fahrrinne frei — bitte Vorfahrt beachten.',
+      '📻 Nordheim Port Control: Liegeplatz 3 verfügbar.',
+      `📻 Wetter-Update: ${this.weather?.label ?? 'Klar'}, Wind ${this.weather?.windSpeed?.toFixed(0) ?? 0} m/s.`,
+      '📻 Stadthafen: Entladekapazität voll — Terminal Ost empfohlen.',
+      '📻 Achtung: Treibgut bei km 47,2. Bitte langsam fahren.',
+      '📻 NMS Anna: Bitte Liegeplatz 7 freimachen. Danke.',
+      '📻 Schleusensteuerung Nordheim: Nächste Schleusung in 10 Minuten.',
+      '📻 Alle Fahrzeuge: Geschwindigkeitsbeschränkung 6 km/h im Hafenbereich.',
+    ];
+    if (wx === 'storm') msgs.push('📻 Sturmwarnung! Bitte Hafen aufsuchen!');
+    if (wx === 'fog')   msgs.push('📻 Nebelwarnung: Sichtweite unter 200m. Navigation per Radar!');
+    const msg = msgs[Math.floor(Math.random() * msgs.length)];
+    this.ui?.showRadioMessage(msg);
   }
 
   // ── Qualität wechseln ──────────────────────────────────────────────────────

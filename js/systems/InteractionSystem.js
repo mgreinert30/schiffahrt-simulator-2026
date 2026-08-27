@@ -20,6 +20,18 @@ export class InteractionSystem {
   _tryInteract() {
     if (this._cooldown > 0) return;
 
+    // Schleuse zuerst prüfen
+    const lock = this.game.lock;
+    if (lock?.inZone && lock.state === 'idle') {
+      const msg = lock.request();
+      if (msg) {
+        this.game.ui?.showNotification(msg, 4000);
+        this.game.ui?.showRadioMessage('🔔 Schleusung bestätigt. Nordheim Lock Control.');
+        this._cooldown = 2.0;
+        return;
+      }
+    }
+
     const port   = this.game.portSystem;
     const action = port.availableAction;
     if (!action) return;

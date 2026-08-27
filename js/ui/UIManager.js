@@ -34,6 +34,10 @@ export class UIManager {
     this.$debug      = document.getElementById('debug-overlay');
     this.$camMode    = document.getElementById('cam-mode-display');
     this.$jobDist    = document.getElementById('job-distance');
+    this.$weather    = document.getElementById('weather-label');
+    this.$wind       = document.getElementById('wind-display');
+    this.$radio      = document.getElementById('harbor-radio');
+    this._radioTO    = null;
 
     // Event-Listener
     document.getElementById('close-map')?.addEventListener('click', () => this.hideMap());
@@ -133,11 +137,20 @@ export class UIManager {
       this.$camMode.textContent = this.game.camCtrl.modeLabel;
     }
 
-    // Interaktions-Prompt
-    const action = this.game.portSystem?.availableAction;
+    // Wetter-Anzeige
+    const wx = this.game.weather;
+    if (wx) {
+      if (this.$weather) this.$weather.textContent = wx.label;
+      if (this.$wind)    this.$wind.textContent    = `💨 ${wx.windSpeed.toFixed(1)} m/s`;
+    }
+
+    // Interaktions-Prompt (Port + Lock)
+    const action   = this.game.portSystem?.availableAction;
+    const lockHint = this.game.lock?.interactionHint;
+    const prompt   = (action && !this.game.cargo?.isBusy) ? action.label : lockHint;
     if (this.$interact) {
-      if (action && !this.game.cargo?.isBusy) {
-        this.$interactTx.textContent = action.label;
+      if (prompt) {
+        this.$interactTx.textContent = prompt;
         this.$interact.classList.remove('hidden');
       } else {
         this.$interact.classList.add('hidden');
@@ -194,6 +207,19 @@ export class UIManager {
         this.$jobDist.textContent = `${dist.toFixed(1)} km`;
       }
     }
+  }
+
+  // ── Hafenfunk ─────────────────────────────────────────────────────────────
+  showRadioMessage(msg, duration = 5000) {
+    if (!this.$radio) return;
+    this.$radio.textContent = msg;
+    this.$radio.classList.remove('hidden');
+    this.$radio.style.opacity = '1';
+    clearTimeout(this._radioTO);
+    this._radioTO = setTimeout(() => {
+      if (this.$radio) this.$radio.style.opacity = '0';
+      setTimeout(() => this.$radio?.classList.add('hidden'), 600);
+    }, duration);
   }
 
   // ── Benachrichtigung ───────────────────────────────────────────────────────

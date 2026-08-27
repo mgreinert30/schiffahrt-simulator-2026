@@ -54,12 +54,19 @@
       </div>
     </div>
 
-    <!-- Oben: Kompass + Uhrzeit + Kameramodus -->
+    <!-- Oben: Kompass + Uhrzeit + Wetter + Kameramodus -->
     <div id="hud-top">
       <span id="compass-display">N</span>
       <span id="time-display">08:00</span>
+      <span class="hud-sep">|</span>
+      <span id="weather-label" class="weather-chip">☀️ Sonnig</span>
+      <span id="wind-display" class="weather-wind">💨 0.5 m/s</span>
+      <span class="hud-sep">|</span>
       <span id="cam-mode-display" class="cam-label">CAM: Verfolgung</span>
     </div>
+
+    <!-- Hafenfunk -->
+    <div id="harbor-radio" class="hidden"></div>
 
     <!-- Rechts: Kontostand + Auftrag -->
     <div id="hud-right">
