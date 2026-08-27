@@ -364,6 +364,45 @@ body {
 .menu-subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 32px; }
 .menu-version { font-size: 11px; color: var(--text-dim); margin-top: 16px; letter-spacing: 1px; }
 
+/* ---- Qualitäts-Selector ---- */
+.quality-selector {
+  margin: 20px 0 8px;
+  text-align: center;
+}
+.quality-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.quality-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.btn-quality {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 6px 18px;
+  transition: all 0.15s;
+}
+.btn-quality:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.btn-quality.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
 /* ---- Loading ---- */
 #loading-screen {
   position: fixed;
